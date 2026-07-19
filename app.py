@@ -73,6 +73,18 @@ RATE_LIMIT_MAX_ATTEMPTS = 6
 _attempts = defaultdict(list)
 
 
+SIGNUP_DAILY_MAX = 10  # abuse guard: max fresh accounts per IP per day
+
+
+def rate_limit_custom(key: str, window_s: int, max_attempts: int, detail: str):
+    now = time.time()
+    window_start = now - window_s
+    _attempts[key] = [t for t in _attempts[key] if t > window_start]
+    if len(_attempts[key]) >= max_attempts:
+        raise HTTPException(status_code=429, detail=detail)
+    _attempts[key].append(now)
+
+
 def rate_limit(key: str):
     now = time.time()
     window_start = now - RATE_LIMIT_WINDOW
@@ -122,6 +134,7 @@ class UserSignup(BaseModel):
     username: str
     email: EmailStr
     password: str
+    agreed_terms: Optional[bool] = None
 
 
 class UserVerify(BaseModel):
@@ -369,6 +382,9 @@ def get_current_user_and_session(authorization: Optional[str] = Header(None)):
         user_row = conn.execute("SELECT * FROM users WHERE id = ?", (session_row["user_id"],)).fetchone()
         if not user_row:
             raise HTTPException(status_code=401, detail="Account not found.")
+        if "is_suspended" in user_row.keys() and user_row["is_suspended"]:
+            # Suspended accounts are locked out of EVERY authed route (jobs included).
+            raise HTTPException(status_code=401, detail="This account is suspended.")
 
         conn.execute("UPDATE sessions SET last_seen = ? WHERE id = ?", (now_utc_str(), session_row["id"]))
         conn.commit()
@@ -435,7 +451,7 @@ for _p, _fn in _NEGOTIATED.items():
 
 # Section URLs with NO API collision can serve the shell directly.
 CLIENT_ONLY_PATHS = [
-    "dashboard", "seeds", "code", "jobs", "activity",
+    "dashboard", "seeds", "code", "jobs", "runspace", "admin", "activity",
     "sign-in", "sign-up", "login", "forgot",
 ]
 for _p in CLIENT_ONLY_PATHS:
@@ -503,6 +519,11 @@ def check_availability(payload: AvailabilityCheck, request: Request):
 @app.post("/signup")
 def signup(user: UserSignup, request: Request):
     rate_limit(f"{client_ip(request)}:signup")
+    rate_limit_custom(
+        f"{client_ip(request)}:signup:daily", 86400, SIGNUP_DAILY_MAX,
+        "Too many new accounts from this network today. Please try again tomorrow.")
+    if user.agreed_terms is not True:
+        raise HTTPException(status_code=400, detail="Please accept the Terms of Use to create an account.")
 
     username = validate_username(user.username)
     email = str(user.email).strip().lower()
@@ -533,9 +554,9 @@ def signup(user: UserSignup, request: Request):
             otp = generate_otp()
             current_time = now_utc_str()
             cursor.execute("""
-                UPDATE users SET password=?, otp=?, otp_created_at=?, updated_at=?
+                UPDATE users SET password=?, otp=?, otp_created_at=?, agreed_terms_at=?, updated_at=?
                 WHERE id=?
-            """, (hashed_pw, otp, current_time, current_time, existing["id"]))
+            """, (hashed_pw, otp, current_time, current_time, current_time, existing["id"]))
             conn.commit()
             send_email(email, "Verify your Ahad Co account", otp, username, "Email Verification")
             return {
@@ -546,9 +567,9 @@ def signup(user: UserSignup, request: Request):
 
         cursor.execute("""
             INSERT INTO users (username, email, password, otp, otp_created_at,
-                is_verified, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, 0, ?, ?)
-        """, (username, email, hashed_pw, otp, current_time, current_time, current_time))
+                is_verified, created_at, updated_at, agreed_terms_at)
+            VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)
+        """, (username, email, hashed_pw, otp, current_time, current_time, current_time, current_time))
         conn.commit()
         inserted_user_id = cursor.lastrowid
 
@@ -605,7 +626,7 @@ def verify_otp(user: UserVerify, request: Request):
     cursor = conn.cursor()
     try:
         row = cursor.execute(
-            "SELECT id, otp, otp_created_at, otp_attempts, is_verified, username FROM users WHERE username = ?", (username,)
+            "SELECT id, otp, otp_created_at, otp_attempts, is_verified, username, email FROM users WHERE username = ?", (username,)
         ).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Account not found.")
@@ -642,6 +663,7 @@ def verify_otp(user: UserVerify, request: Request):
             record_login_attempt(row["id"], request, success=True, location="Email verification")
 
         # Auto-login: create a session immediately after successful verification
+        _grant_admin_if_configured(row["id"], row["email"])
         token = create_session(row["id"], request)
         return {"message": "Verification successful!", "token": token, "username": row["username"]}
     finally:
@@ -661,11 +683,11 @@ def login(user: UserLogin, request: Request):
     try:
         if "@" in identifier:
             row = cursor.execute(
-                "SELECT id, username, password, is_verified FROM users WHERE email = ?", (identifier.lower(),)
+                "SELECT id, username, password, is_verified, email, is_suspended FROM users WHERE email = ?", (identifier.lower(),)
             ).fetchone()
         else:
             row = cursor.execute(
-                "SELECT id, username, password, is_verified FROM users WHERE username = ?", (identifier,)
+                "SELECT id, username, password, is_verified, email, is_suspended FROM users WHERE username = ?", (identifier,)
             ).fetchone()
 
         if not row or not verify_password(user.password, row["password"]):
@@ -691,10 +713,15 @@ def login(user: UserLogin, request: Request):
                 "message": "Please verify your email to continue. A code was sent when you signed up.",
                 "expires_in": remaining,
             }
+        if "is_suspended" in row.keys() and row["is_suspended"]:
+            raise HTTPException(
+                status_code=403,
+                detail="This account is suspended. If you think this is a mistake, contact the site owner.")
     finally:
         conn.close()
 
     record_login_attempt(row["id"], request, success=True)
+    _grant_admin_if_configured(row["id"], row["email"])
     token = create_session(row["id"], request)
     return {"message": "Login successful!", "username": row["username"], "token": token}
 
@@ -855,6 +882,7 @@ def get_profile(authorization: Optional[str] = Header(None)):
     user, _ = get_current_user_and_session(authorization)
     links = json.loads(user["links"]) if user["links"] else []
     return {
+        "id": user["id"],
         "username": user["username"],
         "email": user["email"],
         "phone": user["phone"],
@@ -862,6 +890,7 @@ def get_profile(authorization: Optional[str] = Header(None)):
         "links": links,
         "created_at": user["created_at"],
         "password_changed_at": user["password_changed_at"] if "password_changed_at" in user.keys() else None,
+        "is_admin": bool(user["is_admin"]) if "is_admin" in user.keys() else False,
     }
 
 
@@ -2432,6 +2461,304 @@ def view_wifi_share(token: str):
         f'<h1>WiFi Guest Access</h1><img src="data:image/png;base64,{qr_b64}" alt="WiFi QR code">'
         f"<p>Point your phone camera at the code to join <b>{ssid}</b> instantly — no typing needed.</p>"
         f'<span class="tag">one-time link · now used</span>'))
+
+
+# ================================
+# ADMIN PANEL (owner-only) + ABUSE INBOX
+# ================================
+import os as _os
+ADMIN_EMAILS = {
+    e.strip().lower()
+    for e in _os.getenv("ADMIN_EMAILS", _os.getenv("ADMIN_EMAIL", "")).split(",")
+    if e.strip()
+}
+
+
+def _grant_admin_if_configured(user_id: int, email: str):
+    """The owner's account (matched by ADMIN_EMAIL(S) env) gets is_admin=1
+    automatically on login/verify — no manual DB editing needed."""
+    if not ADMIN_EMAILS or not email:
+        return
+    if email.lower() not in ADMIN_EMAILS:
+        return
+    try:
+        conn = get_db_connection()
+        try:
+            conn.execute("UPDATE users SET is_admin=1, updated_at=? WHERE id=? AND (is_admin IS NULL OR is_admin=0)",
+                         (now_utc_str(), user_id))
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception as exc:
+        logger.warning("admin grant failed for user %s: %s", user_id, exc)
+
+
+def require_admin(authorization):
+    """404 (not 403) for everyone else — the panel's existence stays private."""
+    user, session = get_current_user_and_session(authorization)
+    if not ("is_admin" in user.keys() and user["is_admin"]):
+        raise HTTPException(status_code=404, detail="Not found.")
+    return user, session
+
+
+def _admin_audit(conn, admin_id: int, action: str, target: str = "", details: str = ""):
+    conn.execute(
+        "INSERT INTO admin_audit_log (admin_id, action, target, details, created_at) VALUES (?,?,?,?,?)",
+        (admin_id, action, target, details, now_utc_str()),
+    )
+
+
+def _stop_user_jobs_best_effort(user_id: int):
+    """On suspend: tell the runner to stop every job the account deployed."""
+    try:
+        conn = get_db_connection()
+        try:
+            rows = conn.execute(
+                "SELECT runner_job_id FROM jobs WHERE user_id=? AND runner_job_id IS NOT NULL",
+                (user_id,),
+            ).fetchall()
+            rids = [dict(r)["runner_job_id"] for r in rows if dict(r).get("runner_job_id")]
+        finally:
+            conn.close()
+        for rid in rids:
+            try:
+                _runner_http("POST", f"/internal/jobs/{rid}/stop")
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+
+class AdminSuspend(BaseModel):
+    user_id: int
+    suspended: bool
+    code: Optional[str] = None
+
+
+class AbuseReportIn(BaseModel):
+    url: str
+    reason: Optional[str] = ""
+
+
+@app.get("/admin/overview")
+def admin_overview_route(authorization: Optional[str] = Header(None)):
+    require_admin(authorization)
+    conn = get_db_connection()
+    try:
+        users = dict(conn.execute("SELECT COUNT(*) AS c FROM users").fetchone())["c"]
+        suspended = dict(conn.execute("SELECT COUNT(*) AS c FROM users WHERE is_suspended=1").fetchone())["c"]
+        verified = dict(conn.execute("SELECT COUNT(*) AS c FROM users WHERE is_verified=1").fetchone())["c"]
+        jobs_total = dict(conn.execute("SELECT COUNT(*) AS c FROM jobs").fetchone())["c"]
+        deployed = dict(conn.execute("SELECT COUNT(*) AS c FROM jobs WHERE runner_job_id IS NOT NULL").fetchone())["c"]
+        threshold = (now_utc() - timedelta(days=13)).strftime("%Y-%m-%d")
+        rows = conn.execute(
+            "SELECT substr(created_at, 1, 10) AS day, COUNT(*) AS c "
+            "FROM users WHERE created_at >= ? GROUP BY day ORDER BY day",
+            (threshold,),
+        ).fetchall()
+        series = [{"day": dict(r)["day"], "count": dict(r)["c"]} for r in rows]
+        out = {
+            "users": users, "suspended": suspended, "verified": verified,
+            "jobs_total": jobs_total, "jobs_deployed": deployed,
+            "jobs_max_per_user": MAX_JOBS_PER_USER,
+            "capacity_max": users * MAX_JOBS_PER_USER,
+            "signups_daily": series,
+        }
+    finally:
+        conn.close()
+    # Runner-wide picture (best-effort): how many slots the worker fleet has.
+    try:
+        resp = _runner_http("GET", "/internal/jobs")
+        payload = resp.json() if resp is not None else None
+        if payload:
+            out["runner_capacity"] = payload.get("capacity")
+            out["runner_running"] = sum(
+                1 for j in (payload.get("jobs") or []) if j.get("status") == "running")
+    except Exception:
+        pass
+    return out
+
+
+@app.get("/admin/users")
+def admin_users_route(authorization: Optional[str] = Header(None)):
+    require_admin(authorization)
+    conn = get_db_connection()
+    try:
+        rows = conn.execute(
+            """
+            SELECT u.id, u.username, u.email, u.is_verified, u.is_suspended, u.is_admin,
+                   u.created_at,
+                   (SELECT COUNT(*) FROM jobs j WHERE j.user_id = u.id) AS job_count
+            FROM users u ORDER BY u.id DESC LIMIT 200
+            """
+        ).fetchall()
+        return {"users": [dict(r) for r in rows]}
+    finally:
+        conn.close()
+
+
+@app.get("/admin/jobs")
+def admin_jobs_route(authorization: Optional[str] = Header(None)):
+    """Job METADATA only (+ live status/uptime from the runner, best-effort) —
+    never the code. Privacy stays intact."""
+    require_admin(authorization)
+    conn = get_db_connection()
+    try:
+        rows = conn.execute(
+            """
+            SELECT j.id, j.name, j.language, j.created_at, j.runner_job_id,
+                   u.username AS owner, u.is_suspended AS owner_suspended
+            FROM jobs j JOIN users u ON u.id = j.user_id
+            ORDER BY j.id DESC LIMIT 300
+            """
+        ).fetchall()
+        jobs = [dict(r) for r in rows]
+    finally:
+        conn.close()
+    # Enrich with the runner's live view (status/uptime). Best-effort: if the
+    # runner is asleep or unreachable the metadata list still answers.
+    live = {}
+    try:
+        resp = _runner_http("GET", "/internal/jobs")
+        payload = resp.json() if resp is not None else None
+        for j in (payload or {}).get("jobs", []) or []:
+            live[j.get("id")] = j
+    except Exception:
+        live = {}
+    for row in jobs:
+        info = live.get(row.get("runner_job_id")) or {}
+        row["live_status"] = info.get("status")
+        row["uptime_s"] = info.get("uptime_s")
+        row["web_slug"] = info.get("web_slug")
+    return {"jobs": jobs}
+
+
+@app.post("/admin/users/set-suspended")
+def admin_set_suspended(payload: AdminSuspend, authorization: Optional[str] = Header(None)):
+    admin, _ = require_admin(authorization)
+    if payload.user_id == admin["id"]:
+        raise HTTPException(status_code=400, detail="You cannot suspend your own account.")
+    conn = get_db_connection()
+    try:
+        # Destructive actions demand the admin's own second factor, every time.
+        row = conn.execute("SELECT is_enabled FROM user_2fa WHERE user_id=?", (admin["id"],)).fetchone()
+        if not row or not row["is_enabled"]:
+            raise HTTPException(
+                status_code=409,
+                detail="Enable 2FA on your admin account first — destructive actions require it.")
+        _verify_second_factor(conn, admin["id"], payload.code or "")
+        target = conn.execute("SELECT id, username FROM users WHERE id=?", (payload.user_id,)).fetchone()
+        if not target:
+            raise HTTPException(status_code=404, detail="User not found.")
+        conn.execute(
+            "UPDATE users SET is_suspended=?, updated_at=? WHERE id=?",
+            (1 if payload.suspended else 0, now_utc_str(), payload.user_id),
+        )
+        if payload.suspended:
+            conn.execute("DELETE FROM sessions WHERE user_id=?", (payload.user_id,))
+        _admin_audit(conn, admin["id"], "suspend" if payload.suspended else "reactivate", target["username"], "")
+        conn.commit()
+    finally:
+        conn.close()
+    if payload.suspended:
+        _stop_user_jobs_best_effort(payload.user_id)
+    return {"message": ("Account suspended. Their sessions are closed and jobs are stopping."
+                        if payload.suspended else "Account reactivated.")}
+
+
+@app.get("/admin/audit-log")
+def admin_audit_route(authorization: Optional[str] = Header(None)):
+    require_admin(authorization)
+    conn = get_db_connection()
+    try:
+        rows = conn.execute(
+            """
+            SELECT a.id, a.action, a.target, a.details, a.created_at, u.username AS admin_name
+            FROM admin_audit_log a LEFT JOIN users u ON u.id = a.admin_id
+            ORDER BY a.id DESC LIMIT 100
+            """
+        ).fetchall()
+        return {"audit": [dict(r) for r in rows]}
+    finally:
+        conn.close()
+
+
+@app.get("/admin/abuse-reports")
+def admin_abuse_route(authorization: Optional[str] = Header(None)):
+    require_admin(authorization)
+    conn = get_db_connection()
+    try:
+        rows = conn.execute(
+            "SELECT id, url, reason, ip, status, created_at FROM abuse_reports ORDER BY id DESC LIMIT 100"
+        ).fetchall()
+        return {"reports": [dict(r) for r in rows]}
+    finally:
+        conn.close()
+
+
+# ---- public abuse inbox ----
+@app.get("/report-abuse", include_in_schema=False)
+def report_abuse_page():
+    html = """<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Report abuse · Ahad Co</title>
+<style>
+body{margin:0;font-family:Inter,system-ui,sans-serif;background:#0B0C14;color:#F5F5FA;display:grid;place-items:center;min-height:100vh;padding:20px;box-sizing:border-box}
+.card{max-width:460px;width:100%;background:#14152a;border:1px solid #262852;border-radius:18px;padding:28px}
+h1{font-size:20px;margin:0 0 6px}p{color:#A0A0B2;font-size:13.5px;line-height:1.6;margin:0 0 16px}
+input,textarea{width:100%;box-sizing:border-box;background:#0B0C14;border:1px solid #262852;color:#F5F5FA;border-radius:10px;padding:11px 13px;font-size:14px;margin-bottom:10px;font-family:inherit}
+textarea{min-height:90px;resize:vertical}
+button{width:100%;padding:12px;border:0;border-radius:10px;background:#7C6CF6;color:#fff;font-weight:600;font-size:14px;cursor:pointer}
+button:disabled{opacity:.6;cursor:default}
+#msg{margin-top:12px;font-size:13.5px;text-align:center;min-height:18px}
+.ok{color:#2FD9C4}.err{color:#ff7b7b}
+</style></head><body><div class="card">
+<h1>Report abuse</h1>
+<p>Saw a live page hosted on RunSpace doing something shady — phishing, spam, malware, crypto-mining? Tell us. The site owner reviews every report and can suspend the account.</p>
+<input id="url" placeholder="https://… (the page or job URL)">
+<textarea id="reason" placeholder="What's wrong with it? (optional, but helps)"></textarea>
+<button id="btn">Send report</button>
+<div id="msg"></div>
+</div>
+<script>
+const urlInp = document.getElementById("url");
+const q = new URLSearchParams(location.search).get("url");
+if (q) urlInp.value = q;
+document.getElementById("btn").addEventListener("click", async () => {
+  const btn = document.getElementById("btn"), msg = document.getElementById("msg");
+  if (!urlInp.value.trim()) { msg.className = "err"; msg.textContent = "Paste the URL first."; return; }
+  btn.disabled = true; btn.textContent = "Sending…"; msg.textContent = "";
+  try {
+    const r = await fetch("/report-abuse", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: urlInp.value.trim(), reason: document.getElementById("reason").value }) });
+    const j = await r.json().catch(() => ({}));
+    if (r.ok) { msg.className = "ok"; msg.textContent = "Thanks — the report reached the site owner."; btn.textContent = "Sent ✓"; }
+    else { msg.className = "err"; msg.textContent = j.detail || "Could not send. Try again."; btn.disabled = false; btn.textContent = "Send report"; }
+  } catch (e) { msg.className = "err"; msg.textContent = "Network error — try again."; btn.disabled = false; btn.textContent = "Send report"; }
+});
+</script></body></html>"""
+    from fastapi.responses import HTMLResponse
+    return HTMLResponse(html)
+
+
+@app.post("/report-abuse")
+def report_abuse_submit(payload: AbuseReportIn, request: Request):
+    rate_limit_custom(
+        f"{client_ip(request)}:abuse", 3600, 5,
+        "Too many reports from this network. Try again later.")
+    url = (payload.url or "").strip()
+    if not url or len(url) > 500:
+        raise HTTPException(status_code=400, detail="A valid page URL is required.")
+    reason = (payload.reason or "").strip()[:800]
+    conn = get_db_connection()
+    try:
+        conn.execute(
+            "INSERT INTO abuse_reports (url, reason, ip, created_at) VALUES (?,?,?,?)",
+            (url, reason, client_ip(request), now_utc_str()),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    return {"message": "Thanks — the report reached the site owner."}
 
 
 # ================================

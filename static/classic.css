@@ -1540,3 +1540,155 @@ body.ed-full { overflow: hidden !important; }
 @media (prefers-reduced-motion: reduce) {
   .skel-ic, .skel-bar, .row-leave { animation: none !important; }
 }
+
+/* ============================================================
+   §30 — DEVELOPER-FIRST RESTRUCTURE (RunSpace pivot)
+   - Code Studio + RunSpace are the primary sidebar entries;
+     vault & daily tools stay fully working but visually quieter
+     (.tab-secondary), separated by hairlines (.tab-sep).
+   - Overview opens with two big entry cards (.feat-card).
+   - Signup carries a Terms-of-Use checkbox (.tos-check).
+   - Owner-only admin console (.adm-*) — plain data, calm layout.
+============================================================ */
+
+/* ---------- sidebar: groups & secondary tools ---------- */
+.tab-sep {
+  height: 1px !important; background: var(--cream-line) !important;
+  margin: 8px 10px 6px !important; flex: none;
+}
+.dash-tab.tab-secondary { opacity: .68 !important; }
+.dash-tab.tab-secondary:hover { opacity: 1 !important; }
+.dash-tab.tab-secondary.active { opacity: 1 !important; }
+.dash-tab.tab-secondary .tab-ic { opacity: .75 !important; }
+@media (min-width: 769px) {
+  .dash-tab.tab-secondary { font-size: 12.5px !important; padding: 7.5px 12px !important; }
+}
+.dash-tab.hidden { display: none !important; }
+
+/* ---------- overview: the two hero entry cards ---------- */
+.feat-cards {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+  margin: 18px 0 22px;
+}
+.feat-card {
+  display: flex; align-items: center; gap: 14px; text-align: left;
+  padding: 18px 16px; border-radius: var(--r-md) !important;
+  border: 1.5px solid var(--line) !important; background: var(--panel) !important;
+  cursor: pointer; box-shadow: var(--shadow-s);
+  transition: transform .2s var(--ease), box-shadow .2s var(--ease), border-color .2s var(--ease);
+}
+.feat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-m); border-color: var(--line-2) !important; }
+.feat-card:active { transform: translateY(0); }
+.feat-card.acc {
+  border-color: rgba(188, 67, 8, .38) !important;
+  background: linear-gradient(135deg, var(--acc-soft), transparent 55%), var(--panel) !important;
+}
+.fc-ic {
+  width: 44px; height: 44px; flex: 0 0 auto; display: grid; place-items: center;
+  border-radius: 12px; background: var(--panel-2); color: var(--ink);
+}
+.feat-card.acc .fc-ic { background: rgba(188, 67, 8, .14); color: var(--acc); }
+.fc-ic .ic { width: 22px; height: 22px; }
+.fc-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.fc-body b { font-size: 15px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.fc-body b i {
+  font-style: normal; font-family: var(--mono); font-size: 9.5px; font-weight: 600;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--acc);
+  background: rgba(188, 67, 8, .12); padding: 3px 8px; border-radius: 99px;
+}
+.fc-body small { font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+.fc-go { flex: 0 0 auto; font-size: 17px; color: var(--muted); transition: transform .2s var(--ease), color .2s var(--ease); }
+.feat-card:hover .fc-go { transform: translateX(3px); color: var(--acc); }
+@media (max-width: 768px) {
+  .feat-cards { grid-template-columns: 1fr; gap: 10px; }
+}
+
+/* ---------- hero mock card: LIVE chip ---------- */
+.gc-chip.gc-live {
+  background: rgba(30, 122, 60, .16) !important; color: var(--green) !important;
+  animation: admLivePulse 1.8s ease-in-out infinite;
+}
+@keyframes admLivePulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+
+/* ---------- signup: Terms-of-Use checkbox ---------- */
+.tos-check {
+  display: flex !important; align-items: flex-start; gap: 9px;
+  font-size: 12.5px !important; line-height: 1.5; color: var(--muted) !important;
+  cursor: pointer; margin: 2px 0 4px;
+}
+.tos-check input {
+  width: 16px !important; height: 16px !important; flex: 0 0 auto;
+  margin: 1px 0 0 !important; accent-color: var(--acc); cursor: pointer;
+}
+.tos-check b { color: var(--ink-2); font-weight: 600; }
+
+/* ---------- admin console ---------- */
+.adm-stats {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 18px;
+}
+.adm-stat {
+  background: var(--panel) !important; border: 1px solid var(--line) !important;
+  border-radius: var(--r-sm) !important; padding: 13px 14px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.adm-stat b { font-size: 21px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
+.adm-stat span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; font-family: var(--mono); }
+.adm-stat.warn b { color: var(--red); }
+
+.adm-panel {
+  background: var(--panel) !important; border: 1px solid var(--line) !important;
+  border-radius: var(--r-md) !important; padding: 16px 16px 12px; margin-bottom: 14px;
+}
+.adm-panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+.adm-panel-head h3 { margin: 0 !important; font-size: 14.5px !important; font-weight: 700 !important; color: var(--ink) !important; }
+.adm-hint { font-size: 11.5px; color: var(--muted); }
+
+.adm-spark { display: flex; align-items: flex-end; gap: 5px; height: 64px; padding: 4px 2px 0; }
+.adm-bar {
+  flex: 1; border-radius: 4px 4px 2px 2px; background: var(--acc);
+  min-height: 4px; transition: height .25s var(--ease);
+}
+.adm-bar.zero { background: var(--line); }
+
+.adm-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.adm-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.adm-table th {
+  text-align: left; font-family: var(--mono); font-size: 10px; font-weight: 600;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--muted);
+  padding: 6px 10px 8px 0; border-bottom: 1px solid var(--line); white-space: nowrap;
+}
+.adm-table td { padding: 9px 10px 9px 0; border-bottom: 1px solid var(--line); vertical-align: middle; color: var(--ink-2); }
+.adm-table tr:last-child td { border-bottom: none; }
+.adm-table td b { color: var(--ink); font-weight: 600; }
+.adm-table td small { display: block; color: var(--muted); font-size: 11.5px; margin-top: 1px; }
+.adm-empty { color: var(--muted) !important; text-align: center; padding: 18px 8px !important; font-size: 13px; }
+
+.adm-pill {
+  display: inline-block; font-family: var(--mono); font-size: 10px; font-weight: 600;
+  letter-spacing: .08em; padding: 3px 8px; border-radius: 99px;
+  background: var(--panel-2); color: var(--muted); white-space: nowrap;
+}
+.adm-pill.ok { background: rgba(30, 122, 60, .13); color: var(--green); }
+.adm-pill.warn { background: rgba(179, 38, 30, .12); color: var(--red); }
+
+.adm-act {
+  font-size: 12px !important; font-weight: 600; padding: 5px 12px !important;
+  border-radius: 99px !important; border: 1px solid var(--line-2) !important;
+  background: transparent !important; color: var(--red) !important; cursor: pointer;
+  transition: background .2s var(--ease), color .2s var(--ease), border-color .2s var(--ease);
+  white-space: nowrap;
+}
+.adm-act:hover { background: rgba(179, 38, 30, .1) !important; border-color: var(--red) !important; }
+.adm-act.ok { color: var(--green) !important; }
+.adm-act.ok:hover { background: rgba(30, 122, 60, .1) !important; border-color: var(--green) !important; }
+.adm-link { color: var(--acc) !important; text-decoration: none; font-size: 12.5px; word-break: break-all; }
+.adm-link:hover { text-decoration: underline; }
+
+@media (max-width: 768px) {
+  .adm-stats { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feat-card, .fc-go, .adm-bar, .adm-act { transition: none !important; }
+  .gc-chip.gc-live { animation: none !important; }
+}

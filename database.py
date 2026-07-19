@@ -680,6 +680,28 @@ _SCHEMA_TABLES = [
     )
     """,
     """
+    -- Admin panel: every destructive action lands here (who did what, when).
+    CREATE TABLE IF NOT EXISTS admin_audit_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        admin_id INTEGER NOT NULL,
+        action TEXT NOT NULL,
+        target TEXT,
+        details TEXT,
+        created_at TEXT NOT NULL
+    )
+    """,
+    """
+    -- Public "Report abuse" inbox for live URLs / published pages.
+    CREATE TABLE IF NOT EXISTS abuse_reports (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        url TEXT NOT NULL,
+        reason TEXT,
+        ip TEXT,
+        status TEXT NOT NULL DEFAULT 'open',
+        created_at TEXT NOT NULL
+    )
+    """,
+    """
     CREATE TABLE IF NOT EXISTS user_servers (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
@@ -760,6 +782,14 @@ def init_db():
             conn.execute("ALTER TABLE users ADD COLUMN reset_otp_attempts INTEGER NOT NULL DEFAULT 0")
         if not _column_exists(conn, "users", "password_changed_at"):
             conn.execute("ALTER TABLE users ADD COLUMN password_changed_at TEXT")
+
+        # Pivot: admin flag, suspension flag, terms-of-use acceptance stamp.
+        if not _column_exists(conn, "users", "is_admin"):
+            conn.execute("ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0")
+        if not _column_exists(conn, "users", "is_suspended"):
+            conn.execute("ALTER TABLE users ADD COLUMN is_suspended INTEGER NOT NULL DEFAULT 0")
+        if not _column_exists(conn, "users", "agreed_terms_at"):
+            conn.execute("ALTER TABLE users ADD COLUMN agreed_terms_at TEXT")
 
         conn.commit()
     finally:

@@ -380,6 +380,13 @@ def _slugify(name: str) -> str:
 
 def _live_page(title: str, body: str, accent: str = "#0f0e0c") -> HTMLResponse:
     """Tiny self-contained status page for public /live/ visitors."""
+    # Abuse-report link points back at the main site (set SITE_BASE_URL on this
+    # service, e.g. https://ahad-co-auth.onrender.com). Omitted when unset.
+    site = os.getenv("SITE_BASE_URL", "").strip().rstrip("/")
+    report = (
+        f'<p class="note"><a style="color:inherit" href="{site}/report-abuse">Report abuse</a></p>'
+        if site else ""
+    )
     html = f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{title}</title><style>
@@ -390,7 +397,7 @@ border:1px solid #e4e0d5;border-top:3px solid {accent};box-shadow:0 18px 40px -2
 h1{{font-size:21px;margin:0 0 10px;font-weight:600}}
 p{{font-size:14px;line-height:1.65;margin:6px 0;color:#5c584e}}
 .note{{margin-top:16px;padding-top:12px;border-top:1px dashed #e4e0d5;font-size:12px;color:#8a8474}}
-</style></head><body><div class="card">{body}</div></body></html>"""
+</style></head><body><div class="card">{body}{report}</div></body></html>"""
     return HTMLResponse(html)
 
 

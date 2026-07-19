@@ -80,12 +80,16 @@ function switchTab(tabId) {
   const t = document.getElementById(`tab-${tabId}`);
   t.classList.add("active");
   // Sync mobile bottom-nav highlight (map extra tabs back to "more").
-  const map = { bookmarks: "more", tasks: "more", profile: "more", jobs: "more" };
+  const map = { vault: "more", cards: "more", identities: "more", contacts: "more",
+    wifi: "more", servers: "more", recovery: "more", notes: "more",
+    bookmarks: "more", tasks: "more", profile: "more", admin: "more" };
   document.querySelectorAll(".bn-item").forEach(b => {
     b.classList.toggle("active", b.dataset.tab === (map[tabId] || tabId));
   });
   // ⚡ Jobs tab: live-refresh statuses while it's open, stop polling otherwise.
   if (tabId === "jobs") { startJobPolling(); } else { stopJobPolling(); }
+  // Admin console loads fresh every time it's opened (owner-only anyway).
+  if (tabId === "admin" && typeof loadAdminPanel === "function") { loadAdminPanel(); }
   // ⚙️ Settings: keep the security panel truthful every time it opens.
   if (tabId === "profile") { refreshSecurityPanel(); loadSessionsList(); }
   // 🔗 Every section is a REAL URL — back/forward + refresh + sharing work.
@@ -658,6 +662,12 @@ async function handleSignup(e) {
   const email = document.getElementById("su_email").value.trim();
   const password = document.getElementById("su_password").value;
   if (username.length < 3) { toast("Username must be at least 3 characters", "error"); return; }
+  const termsEl = document.getElementById("su_terms");
+  if (termsEl && !termsEl.checked) {
+    toast("Please accept the Terms of Use to continue.", "error");
+    termsEl.focus();
+    return;
+  }
   // Early duplicate check — say "already registered" BEFORE the OTP dance.
   try {
     const av = await api("/auth/check-availability", "POST", { username, email });
@@ -669,7 +679,7 @@ async function handleSignup(e) {
   } catch (e) { /* check endpoint hiccup — /signup will decide anyway */ }
   btnBusy(btn);
   try {
-    const res = await api("/signup", "POST", { username, email, password });
+    const res = await api("/signup", "POST", { username, email, password, agreed_terms: true });
     signupUsername = username;
     localStorage.setItem("ahad_signup_username", username);
     localStorage.setItem("ahad_signup_email", email);
@@ -872,6 +882,7 @@ async function loadDashboard() {
       document.getElementById("statDays").textContent = days || 1;
     }
     _lastProfile = profile;
+    applyAdminVisibility(profile);
     refreshSecurityPanel();
     loadSessionsList();
   } catch (err) {
@@ -2671,7 +2682,8 @@ const ROUTES = {
   "/dashboard": "overview", "/vault": "vault", "/cards": "cards",
   "/identities": "identities", "/contacts": "contacts", "/wifi": "wifi",
   "/servers": "servers", "/seeds": "recovery", "/recovery": "recovery",
-  "/code": "code", "/jobs": "jobs", "/notes": "notes",
+  "/code": "code", "/runspace": "jobs", "/jobs": "jobs",
+  "/admin": "admin", "/notes": "notes",
   "/bookmarks": "bookmarks", "/tasks": "tasks", "/profile": "profile",
 };
 const TAB_PATHS = {};
@@ -2746,7 +2758,13 @@ function _consumeReturnTo() {
     _routeNav = false;
     if (rt === "/activity" && typeof openActivityPanel === "function") openActivityPanel();
   } else {
-    try { history.replaceState({}, "", "/dashboard"); } catch (e4) {}
+    // Never clobber the address bar if the user already navigated into a
+    // section while the dashboard was still loading (e.g. quick-click on
+    // RunSpace right after sign-in) — the URL is the user's truth.
+    const cur = _clientPath();
+    if (!ROUTES[cur] && cur !== "/dashboard") {
+      try { history.replaceState({}, "", "/dashboard"); } catch (e4) {}
+    }
   }
 }
 
@@ -3148,12 +3166,14 @@ async function showLoginHistory() {
    running on the runner service, with live logs. */
 let _jobsTimer = null;
 let _jobLogFor = null;
-let _lastJobsSig = ""; // change detection: skip re-render when nothing moved
+let _lastJobsSig = null; // change detection: skip re-render when nothing moved.
+                         // MUST be null (not "") — the empty-list signature is "",
+                         // and "" === "" would skip the very first render forever.
 
 async function loadJobs() {
   const list = document.getElementById("jobsList");
   if (!list) return;
-  if (!_lastJobsSig) list.innerHTML = _skel(2);
+  if (_lastJobsSig === null) list.innerHTML = _skel(2);
   try {
     const data = await api("/api/jobs", "GET", null, true);
     // Flicker guard: rebuild the list ONLY when statuses actually changed
@@ -3184,7 +3204,7 @@ function renderJobs(jobs) {
   if (!jobs.length) {
     const div = document.createElement("div");
     div.className = "jobs-empty";
-    div.innerHTML = ic("zap") + ' No jobs yet — paste code above and press <b>Start 24/7</b>.';
+    div.innerHTML = ic("zap") + ' Nothing deployed yet — paste code above and press <b>Deploy 24/7</b>.';
     list.appendChild(div);
     return;
   }
@@ -3250,7 +3270,7 @@ async function toggleJobAccess(id, makePublic) {
       toast("Private link ready — copied ✓", "success");
       copyText(info.web_private_url);
     } else {
-      toast(makePublic ? "Job URL is now PUBLIC" : "Job URL is now PRIVATE", "info");
+      toast(makePublic ? "App URL is now PUBLIC" : "App URL is now PRIVATE", "info");
     }
     loadJobs();
   } catch (e) { toast(e.message, "error"); }
@@ -3260,13 +3280,13 @@ async function startJob() {
   const name = document.getElementById("jobName").value.trim();
   const language = document.getElementById("jobLang").value;
   const code = document.getElementById("jobCode").value;
-  if (!name) { toast("Give the job a name!", "error"); return; }
+  if (!name) { toast("Give the app a name!", "error"); return; }
   if (!code.trim()) { toast("Paste some code first!", "error"); return; }
   const btn = document.getElementById("btnStartJob");
   setLoading(btn, true);
   try {
     const info = await api("/api/jobs", "POST", { name, language, code }, true);
-    toast("Job started — running 24/7 now 🚀", "success");
+    toast("Deployed — running 24/7 now 🚀", "success");
     document.getElementById("jobName").value = "";
     document.getElementById("jobCode").value = "";
     await loadJobs();
@@ -3281,7 +3301,7 @@ async function startJob() {
 async function stopJobById(id) {
   try {
     await api(`/api/jobs/${id}/stop`, "POST", null, true);
-    toast("Job stopped", "info");
+    toast("App stopped", "info");
     loadJobs();
   } catch (e) { toast(e.message, "error"); }
 }
@@ -3289,17 +3309,17 @@ async function stopJobById(id) {
 async function restartJobById(id) {
   try {
     await api(`/api/jobs/${id}/restart`, "POST", null, true);
-    toast("Job restarted 🚀", "success");
+    toast("App restarted 🚀", "success");
     loadJobs();
   } catch (e) { toast(e.message, "error"); }
 }
 
 async function deleteJobById(id, btn) {
-  if (!confirm("Delete this job permanently?")) return;
+  if (!confirm("Delete this app permanently?")) return;
   try {
     await api(`/api/jobs/${id}`, "DELETE", null, true);
     closeJobLogs();
-    toast("Job deleted", "info");
+    toast("App deleted", "info");
     await _rowOut(btn);
     loadJobs();
   } catch (e) { toast(e.message, "error"); }
@@ -3416,3 +3436,179 @@ function startJobPolling() {
 function stopJobPolling() {
   if (_jobsTimer) { clearInterval(_jobsTimer); _jobsTimer = null; }
 }
+
+/* ==================== ADMIN CONSOLE (owner-only) ====================
+   The sidebar button stays hidden until /profile says is_admin. The server
+   answers 404 (not 403) for everybody else, so the panel's existence is
+   never leaked. Destructive actions re-ask the admin's OWN 2FA code. */
+let _admPending = null;   // { user_id, suspended } awaiting 2FA confirm
+
+function applyAdminVisibility(profile) {
+  const btn = document.getElementById("tabBtnAdmin");
+  if (!btn) return;
+  btn.classList.toggle("hidden", !(profile && profile.is_admin));
+}
+
+async function loadAdminPanel(force) {
+  const stats = document.getElementById("admStats");
+  if (!stats) return;
+  if (force) delete stats.dataset.loaded;
+  if (stats.dataset.loaded !== "1") {
+    stats.innerHTML = '<div class="adm-stat"><b>…</b><span>loading</span></div>';
+  }
+  try {
+    const [ov, usersR, jobsR, reportsR, auditR] = await Promise.all([
+      api("/admin/overview", "GET", null, true),
+      api("/admin/users", "GET", null, true),
+      api("/admin/jobs", "GET", null, true),
+      api("/admin/abuse-reports", "GET", null, true),
+      api("/admin/audit-log", "GET", null, true),
+    ]);
+    renderAdminStats(ov || {});
+    renderAdminSpark(ov || {});
+    renderAdminJobs((jobsR && jobsR.jobs) || []);
+    renderAdminUsers((usersR && usersR.users) || []);
+    renderAdminReports((reportsR && reportsR.reports) || []);
+    renderAdminAudit((auditR && auditR.audit) || []);
+    stats.dataset.loaded = "1";
+  } catch (e) {
+    // 404 for non-admins — stay quiet and ambiguous, just like the server.
+    stats.innerHTML = '<div class="adm-empty">Nothing here.</div>';
+  }
+}
+
+function renderAdminStats(ov) {
+  const el = document.getElementById("admStats");
+  const chip = (label, val, cls) =>
+    `<div class="adm-stat${cls ? " " + cls : ""}"><b>${val}</b><span>${label}</span></div>`;
+  el.innerHTML =
+    chip("users", ov.users ?? 0) +
+    chip("verified", ov.verified ?? 0) +
+    chip("suspended", ov.suspended ?? 0, ov.suspended ? "warn" : "") +
+    chip("apps live", ov.jobs_deployed ?? 0) +
+    chip("capacity used", `${ov.jobs_deployed ?? 0}/${ov.capacity_max ?? 0}`);
+  const cap = document.getElementById("admCap");
+  if (cap) cap.textContent =
+    `capacity: ${ov.jobs_deployed ?? 0} of ${ov.capacity_max ?? 0} slots used (max ${ov.jobs_max_per_user ?? 3}/user)` +
+    (ov.runner_capacity != null ? ` · runner: ${ov.runner_running ?? 0}/${ov.runner_capacity} busy` : "");
+}
+
+function renderAdminSpark(ov) {
+  const el = document.getElementById("admSpark");
+  if (!el) return;
+  const byDay = {};
+  (ov.signups_daily || []).forEach(r => { byDay[r.day] = r.count; });
+  const days = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 86400000);
+    const key = d.toISOString().slice(0, 10);
+    days.push({ label: key.slice(5), count: byDay[key] || 0 });
+  }
+  const max = Math.max(1, ...days.map(d => d.count));
+  el.innerHTML = days.map(d => {
+    const h = Math.max(6, Math.round((d.count / max) * 56));
+    return `<span class="adm-bar${d.count ? "" : " zero"}" style="height:${h}px" title="${d.label}: ${d.count} signup${d.count === 1 ? "" : "s"}"></span>`;
+  }).join("");
+}
+
+function renderAdminJobs(jobs) {
+  const el = document.getElementById("admJobs");
+  if (!el) return;
+  if (!jobs.length) { el.innerHTML = '<tr><td class="adm-empty">No RunSpace apps yet.</td></tr>'; return; }
+  el.innerHTML = '<tr><th>App</th><th>Owner</th><th>Lang</th><th>Status</th><th>Uptime</th><th>Created</th></tr>' +
+    jobs.map(j => {
+      const st = (j.live_status || (j.runner_job_id ? "offline" : "stopped")).toLowerCase();
+      const live = st === "running";
+      return `<tr><td><b>${escapeHtml(j.name)}</b></td>` +
+      `<td>${escapeHtml(j.owner)}${j.owner_suspended ? ' <span class="adm-pill warn">suspended</span>' : ""}</td>` +
+      `<td>${escapeHtml(j.language)}</td>` +
+      `<td><span class="adm-pill${live ? " ok" : ""}">${escapeHtml(st)}</span></td>` +
+      `<td>${j.uptime_s ? _fmtUptime(j.uptime_s) : "—"}</td>` +
+      `<td>${escapeHtml((j.created_at || "").slice(0, 10))}</td></tr>`;
+    }).join("");
+}
+
+function renderAdminUsers(users) {
+  const el = document.getElementById("admUsers");
+  if (!el) return;
+  if (!users.length) { el.innerHTML = '<tr><td class="adm-empty">No users yet.</td></tr>'; return; }
+  const meId = _lastProfile && _lastProfile.id;
+  el.innerHTML = '<tr><th>User</th><th>Joined</th><th>Apps</th><th>Status</th><th></th></tr>' +
+    users.map(u => {
+      const isMe = meId && u.id === meId;
+      const state = u.is_suspended
+        ? '<span class="adm-pill warn">suspended</span>'
+        : (u.is_verified ? '<span class="adm-pill ok">active</span>' : '<span class="adm-pill">unverified</span>');
+      const act = isMe
+        ? '<span class="adm-hint">you</span>'
+        : `<button class="adm-act${u.is_suspended ? " ok" : ""}" onclick="askSuspend(${u.id}, ${u.is_suspended ? 0 : 1}, this)">${u.is_suspended ? "Reactivate" : "Suspend"}</button>`;
+      return `<tr><td><b>${escapeHtml(u.username)}</b><small>${escapeHtml(u.email)}</small></td>` +
+        `<td>${escapeHtml((u.created_at || "").slice(0, 10))}</td>` +
+        `<td>${u.job_count}</td><td>${state}</td><td>${act}</td></tr>`;
+    }).join("");
+}
+
+function renderAdminReports(reports) {
+  const el = document.getElementById("admReports");
+  if (!el) return;
+  if (!reports.length) { el.innerHTML = '<tr><td class="adm-empty">No abuse reports — all quiet. 🎉</td></tr>'; return; }
+  el.innerHTML = '<tr><th>When</th><th>Reported URL</th><th>Reason</th><th>Status</th></tr>' +
+    reports.map(r =>
+      `<tr><td>${escapeHtml((r.created_at || "").slice(0, 16))}</td>` +
+      `<td><a class="adm-link" href="${escapeHtml(r.url)}" target="_blank" rel="noopener">${escapeHtml(r.url.length > 48 ? r.url.slice(0, 48) + "…" : r.url)}</a></td>` +
+      `<td>${escapeHtml(r.reason || "—")}</td>` +
+      `<td><span class="adm-pill${r.status === "open" ? " warn" : ""}">${escapeHtml(r.status)}</span></td></tr>`
+    ).join("");
+}
+
+function renderAdminAudit(audit) {
+  const el = document.getElementById("admAudit");
+  if (!el) return;
+  if (!audit.length) { el.innerHTML = '<tr><td class="adm-empty">No admin actions recorded yet.</td></tr>'; return; }
+  el.innerHTML = '<tr><th>When</th><th>Admin</th><th>Action</th><th>Target</th></tr>' +
+    audit.map(a =>
+      `<tr><td>${escapeHtml((a.created_at || "").slice(0, 16))}</td>` +
+      `<td>${escapeHtml(a.admin_name || "—")}</td>` +
+      `<td><span class="adm-pill">${escapeHtml(a.action)}</span></td>` +
+      `<td>${escapeHtml(a.target || "")}</td></tr>`
+    ).join("");
+}
+
+function askSuspend(userId, suspend, btn) {
+  const row = btn.closest("tr");
+  const uname = row ? (row.querySelector("b") || {}).textContent || "this user" : "this user";
+  _admPending = { user_id: userId, suspended: !!suspend };
+  document.getElementById("adminModalTitle").textContent = suspend ? `Suspend ${uname}?` : `Reactivate ${uname}?`;
+  document.getElementById("adminModalText").textContent = suspend
+    ? `${uname} will be signed out on every device and their RunSpace apps will stop. You can reactivate anytime. Confirm with YOUR authenticator code.`
+    : `${uname} gets their access back immediately. Confirm with YOUR authenticator code.`;
+  document.getElementById("adminTfaCode").value = "";
+  openModal("adminModal");
+  setTimeout(() => { const i = document.getElementById("adminTfaCode"); if (i) i.focus(); }, 80);
+}
+
+async function confirmAdminAction() {
+  if (!_admPending) { closeModal("adminModal"); return; }
+  const btn = document.getElementById("adminModalGo");
+  const code = document.getElementById("adminTfaCode").value.trim();
+  if (!code) { toast("Enter your 6-digit authenticator code.", "error"); return; }
+  setLoading(btn, true);
+  try {
+    const res = await api("/admin/users/set-suspended", "POST",
+      { user_id: _admPending.user_id, suspended: _admPending.suspended, code }, true);
+    _admPending = null;
+    closeModal("adminModal");
+    toast((res && res.message) || "Done.", "success");
+    loadAdminPanel(true);
+  } catch (e) {
+    toast(e.message, "error");
+  } finally {
+    setLoading(btn, false);
+  }
+}
+
+// Enter inside the admin 2FA box = confirm. (Wired once at boot.)
+(function () {
+  const box = document.getElementById("adminTfaCode");
+  if (box) box.addEventListener("keydown", (e) => { if (e.key === "Enter") confirmAdminAction(); });
+})();
