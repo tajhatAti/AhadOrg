@@ -79,6 +79,9 @@ class JobCreateRequest(BaseModel):
 class JobAccessToggle(BaseModel):
     public: bool = True
 
+class JobUpdateRequest(BaseModel):
+    code: str
+
 class UserPreferencesUpdate(BaseModel):
     theme: Optional[str] = None
     language: Optional[str] = None

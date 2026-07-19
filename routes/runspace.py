@@ -2,11 +2,10 @@ import json
 import asyncio
 from fastapi import APIRouter, Header, HTTPException, Request
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
 from typing import Optional
 
 from database import get_db_connection
-from models import JobCreateRequest, GenericDelete, JobAccessToggle
+from models import JobCreateRequest, GenericDelete, JobAccessToggle, JobUpdateRequest
 from utils import now_utc_str, client_ip, rate_limit
 from auth_deps import get_current_user_and_session
 from services.job_runner import start_job, stop_job, get_job_info, list_all_jobs
@@ -41,9 +40,6 @@ def get_job_detail_route(job_id: str, authorization: Optional[str] = Header(None
         if not row: raise HTTPException(404)
         return dict(row)
     finally: conn.close()
-
-class JobUpdateRequest(BaseModel):
-    code: str
 
 @router.put("/api/jobs/{job_id}")
 def update_job_route(job_id: str, payload: JobUpdateRequest, authorization: Optional[str] = Header(None)):
