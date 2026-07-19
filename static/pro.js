@@ -2658,11 +2658,11 @@ let _ideLogAutoScroll = true;
 
 function openNewJobModal() {
   document.getElementById("newJobName").value = "";
-  document.getElementById("newJobModal").classList.remove("hidden");
+  openModal("newJobModal");
 }
 
 function closeNewJobModal() {
-  document.getElementById("newJobModal").classList.add("hidden");
+  closeModal("newJobModal");
 }
 
 async function createAndOpenJob() {
@@ -2681,8 +2681,7 @@ async function createAndOpenJob() {
 
 async function openIde(jobId) {
   try {
-    const data = await api("/api/jobs", "GET", null, true);
-    const job = (data.jobs || []).find(j => j.runner_job_id === jobId || j.id === jobId);
+    const job = await api(`/api/jobs/${jobId}`, "GET", null, true);
     if (!job) return;
 
     _activeIdeJob = job;
@@ -2691,24 +2690,22 @@ async function openIde(jobId) {
     
     document.getElementById("ideJobName").textContent = job.name;
     document.getElementById("ideJobLang").textContent = job.language;
-    
-    // In a real app, we'd fetch the full code for this job here.
-    // For now, let's assume it's part of the job object or we fetch it.
-    const fullJob = await api(`/api/jobs/${job.id || job.runner_job_id}/logs`, "GET", null, true);
     document.getElementById("ideEditor").value = job.code || ""; 
+    updateLineNumbers();
     
     updateIdeStatus(job.status);
     
-    if (job.web && job.web_url) {
+    const info = await api(`/api/jobs/${job.runner_job_id}/logs`, "GET", null, true).catch(() => ({}));
+    if (info && info.web_url) {
       document.getElementById("ideUrlBar").style.display = "flex";
-      document.getElementById("ideUrlText").textContent = job.web_url;
-      document.getElementById("idePublicUrl").href = job.web_url;
+      document.getElementById("ideUrlText").textContent = info.web_url;
+      document.getElementById("idePublicUrl").href = info.web_url;
     } else {
       document.getElementById("ideUrlBar").style.display = "none";
     }
 
-    startIdeLogStream(job.runner_job_id || job.id);
-  } catch (e) { toast("Failed to open IDE", "error"); }
+    startIdeLogStream(job.runner_job_id);
+  } catch (e) { toast("Failed to open IDE: " + e.message, "error"); }
 }
 
 function closeIde() {
@@ -2810,6 +2807,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("ideCloseBtn")?.addEventListener("click", closeIde);
   
+  document.getElementById("ideSaveBtn")?.addEventListener("click", async () => {
+    if (!_activeIdeJob) return;
+    const code = document.getElementById("ideEditor").value;
+    try {
+      await api(`/api/jobs/${_activeIdeJob.runner_job_id}`, "PUT", { code }, true);
+      toast("Code saved!", "success");
+    } catch (e) { toast(e.message, "error"); }
+  });
+
   document.getElementById("ideClearTermBtn")?.addEventListener("click", () => {
     document.getElementById("ideTerminal").innerHTML = "";
   });

@@ -8,10 +8,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,560;0,9..144,600;1,9..144,500;1,9..144,560&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/pro.css?v=20260719g">
-<link rel="stylesheet" href="/static/emoji.css?v=20260719g">
+<link rel="stylesheet" href="/static/pro.css?v=20260720a">
+<link rel="stylesheet" href="/static/emoji.css?v=20260720a">
 <!-- Ahad Classic theme (editorial minimal) — loaded LAST so it wins the cascade -->
-<link rel="stylesheet" href="/static/classic.css?v=20260719g">
+<link rel="stylesheet" href="/static/classic.css?v=20260720a">
 <script>
   // Boot guard — prevents a flash of the wrong screen before JS decides.
   (function () {
@@ -454,36 +454,6 @@
 
       <!-- Apps Grid (shown when no IDE is active) -->
       <div id="jobsGrid" class="jobs-list" style="margin-top:20px"></div>
-
-      <!-- New Job Modal -->
-      <div id="newJobModal" class="auth hidden" style="background:rgba(0,0,0,0.8);backdrop-filter:blur(4px)">
-        <div class="auth-card">
-          <div class="auth-head">
-            <div class="eyebrow">NEW APP</div>
-            <h2>Deploy to RunSpace</h2>
-          </div>
-          <div class="auth-form">
-            <div class="field">
-              <span>APP NAME</span>
-              <input type="text" id="newJobName" placeholder="my-bot-name" maxlength="30">
-            </div>
-            <div class="field">
-              <span>LANGUAGE</span>
-              <select id="newJobLang" class="input-select">
-                <option value="python">Python 3</option>
-                <option value="javascript">Node.js</option>
-                <option value="bash">Bash Script</option>
-                <option value="php">PHP</option>
-                <option value="ruby">Ruby</option>
-              </select>
-            </div>
-            <div class="form-actions">
-              <button class="btn-primary block" onclick="createAndOpenJob()">Create & Open IDE</button>
-              <button class="btn-ghost block" onclick="closeNewJobModal()">Cancel</button>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
 
     <div class="dash-tab-content" id="tab-profile">
@@ -679,7 +649,7 @@
 
 <div class="toast-container" id="toastContainer"></div>
 
-<script src="/static/pro.js?v=20260719g"></script>
+<script src="/static/pro.js?v=20260720a"></script>
 <script>
   // Safety net: never leave the user stuck on the splash — remove the
   // booting class AND hard-hide the splash element, whatever went wrong.
@@ -690,5 +660,34 @@
     if (s && !s.classList.contains('hidden')) { s.classList.add('hidden'); s.style.display = 'none'; }
   }, 4000);
 </script>
+  <!-- New Job Modal -->
+  <div id="newJobModal" class="auth hidden" style="background:rgba(0,0,0,0.8);backdrop-filter:blur(4px);z-index:9001">
+    <div class="auth-card">
+      <div class="auth-head">
+        <div class="eyebrow">NEW APP</div>
+        <h2>Deploy to RunSpace</h2>
+      </div>
+      <div class="auth-form">
+        <div class="field">
+          <span>APP NAME</span>
+          <input type="text" id="newJobName" placeholder="my-bot-name" maxlength="30">
+        </div>
+        <div class="field">
+          <span>LANGUAGE</span>
+          <select id="newJobLang" class="input-select">
+            <option value="python">Python 3</option>
+            <option value="javascript">Node.js</option>
+            <option value="bash">Bash Script</option>
+            <option value="php">PHP</option>
+            <option value="ruby">Ruby</option>
+          </select>
+        </div>
+        <div class="form-actions">
+          <button class="btn-primary block" id="btnCreateJob" onclick="createAndOpenJob()">Create & Open IDE</button>
+          <button class="btn-ghost block" onclick="closeNewJobModal()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

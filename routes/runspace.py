@@ -31,8 +31,30 @@ def create_job_route(payload: JobCreateRequest, request: Request, authorization:
         return {"id": info["id"]}
     finally: conn.close()
 
-@router.get("/api/jobs")
-def list_jobs_route(authorization: Optional[str] = Header(None)):
+@router.get("/api/jobs/{job_id}")
+def get_job_detail_route(job_id: str, authorization: Optional[str] = Header(None)):
+    user, _ = get_current_user_and_session(authorization)
+    conn = get_db_connection()
+    try:
+        row = conn.execute("SELECT * FROM jobs WHERE (runner_job_id=? OR id=?) AND user_id=?", (job_id, job_id, user["id"])).fetchone()
+        if not row: raise HTTPException(404)
+        return dict(row)
+    finally: conn.close()
+
+class JobUpdateRequest(BaseModel):
+    code: str
+
+@router.put("/api/jobs/{job_id}")
+def update_job_route(job_id: str, payload: JobUpdateRequest, authorization: Optional[str] = Header(None)):
+    user, _ = get_current_user_and_session(authorization)
+    conn = get_db_connection()
+    try:
+        row = conn.execute("SELECT id FROM jobs WHERE runner_job_id=? AND user_id=?", (job_id, user["id"])).fetchone()
+        if not row: raise HTTPException(404)
+        conn.execute("UPDATE jobs SET code=?, updated_at=? WHERE runner_job_id=?", (payload.code, now_utc_str(), job_id))
+        conn.commit()
+        return {"message": "Updated."}
+    finally: conn.close()
     user, _ = get_current_user_and_session(authorization)
     conn = get_db_connection()
     try:
@@ -42,6 +64,7 @@ def list_jobs_route(authorization: Optional[str] = Header(None)):
             info = get_job_info(r["runner_job_id"])
             d = dict(r)
             d["status"] = info["status"] if info else "offline"
+            d.pop("code", None)
             jobs.append(d)
         return {"jobs": jobs}
     finally: conn.close()
