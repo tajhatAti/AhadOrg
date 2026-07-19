@@ -60,17 +60,24 @@ def toggle_share(payload: SnippetShare, authorization: Optional[str] = Header(No
     user, _ = get_current_user_and_session(authorization)
     conn = get_db_connection()
     try:
-        row = conn.execute("SELECT share_token FROM snippets WHERE id=? AND user_id=?", (payload.id, user["id"])).fetchone()
+        row = conn.execute("SELECT share_token, is_public FROM snippets WHERE id=? AND user_id=?", (payload.id, user["id"])).fetchone()
         if not row: raise HTTPException(404)
+        
         token = row["share_token"]
-        if payload.share and not token:
-            token = secrets.token_urlsafe(12)
+        if payload.share:
+            if not token:
+                token = secrets.token_urlsafe(12)
             conn.execute("UPDATE snippets SET share_token=?, is_public=1 WHERE id=?", (token, payload.id))
-        elif not payload.share:
+        else:
             token = None
             conn.execute("UPDATE snippets SET share_token=NULL, is_public=0 WHERE id=?", (payload.id,))
+            
         conn.commit()
-        return {"token": token}
+        return {
+            "share": payload.share,
+            "token": token,
+            "url": f"/s/{token}" if token else None
+        }
     finally: conn.close()
 
 @router.get("/s/{token}")
