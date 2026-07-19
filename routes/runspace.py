@@ -58,7 +58,15 @@ def get_job_detail_route(job_id: str, authorization: Optional[str] = Header(None
     user, _ = get_current_user_and_session(authorization)
     conn = get_db_connection()
     try:
-        row = conn.execute("SELECT * FROM jobs WHERE (runner_job_id=? OR id=?) AND user_id=?", (job_id, job_id, user["id"])).fetchone()
+        # job_id could be the string runner_job_id or the integer database id.
+        # PostgreSQL fails if we compare a hex string to an integer column (id).
+        if job_id.isdigit():
+            row = conn.execute("SELECT * FROM jobs WHERE (id=? OR runner_job_id=?) AND user_id=?", 
+                               (int(job_id), job_id, user["id"])).fetchone()
+        else:
+            row = conn.execute("SELECT * FROM jobs WHERE runner_job_id=? AND user_id=?", 
+                               (job_id, user["id"])).fetchone()
+        
         if not row: raise HTTPException(404)
         return dict(row)
     finally: conn.close()
@@ -68,7 +76,13 @@ def job_logs_route(job_id: str, authorization: Optional[str] = Header(None)):
     user, _ = get_current_user_and_session(authorization)
     conn = get_db_connection()
     try:
-        row = conn.execute("SELECT runner_job_id FROM jobs WHERE (runner_job_id=? OR id=?) AND user_id=?", (job_id, job_id, user["id"])).fetchone()
+        if job_id.isdigit():
+            row = conn.execute("SELECT runner_job_id FROM jobs WHERE (id=? OR runner_job_id=?) AND user_id=?", 
+                               (int(job_id), job_id, user["id"])).fetchone()
+        else:
+            row = conn.execute("SELECT runner_job_id FROM jobs WHERE runner_job_id=? AND user_id=?", 
+                               (job_id, user["id"])).fetchone()
+                               
         if not row: raise HTTPException(404)
         rid = row["runner_job_id"]
         info = get_job_info(rid)
