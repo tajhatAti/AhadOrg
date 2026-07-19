@@ -441,6 +441,14 @@ CLIENT_ONLY_PATHS = [
 for _p in CLIENT_ONLY_PATHS:
     app.get("/" + _p, include_in_schema=False)(read_index)
 
+# Back-compat heal: a frontend bug once produced published-page links like
+# /code/s/<token> (the tab path was glued onto the origin). Redirect any
+# shared copies to the real public page instead of a cold JSON 404.
+@app.get("/code/s/{token}", include_in_schema=False)
+def code_share_redirect(token: str):
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url=f"/s/{token}", status_code=301)
+
 
 @app.get("/health")
 def health():

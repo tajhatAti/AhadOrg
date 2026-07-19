@@ -138,7 +138,13 @@ r = c.get("/search?q=amma", headers=H2); check("GET /search", r)
 r = c.post("/snippets", json={"title": "pub", "language": "html", "content": "<h1>hi</h1>"}, headers=H2)
 sid = r.json()["id"]
 r = c.post("/snippets/share", json={"id": sid, "share": True}, headers=H2); check("POST /snippets/share", r)
-r = c.get("/s/" + r.json()["token"]); check("GET /s/{token} (published page)", r)
+share_tok = r.json()["token"]
+r = c.get("/s/" + share_tok); check("GET /s/{token} (published page)", r)
+try:
+    r = c.get(f"/code/s/{share_tok}", follow_redirects=False)
+except TypeError:
+    r = c.get(f"/code/s/{share_tok}")
+check("GET /code/s/{token} (legacy link healed)", r, (200, 301, 302, 307, 308))
 
 # ---------- jobs + execute (no runner configured → graceful) ----------
 r = c.get("/api/jobs", headers=H2); check("GET /api/jobs (200, runner state reported)", r)

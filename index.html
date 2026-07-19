@@ -8,10 +8,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,560;0,9..144,600;1,9..144,500;1,9..144,560&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/pro.css?v=20260719c">
-<link rel="stylesheet" href="/static/emoji.css?v=20260719c">
+<link rel="stylesheet" href="/static/pro.css?v=20260719e">
+<link rel="stylesheet" href="/static/emoji.css?v=20260719e">
 <!-- Ahad Classic theme (editorial minimal) — loaded LAST so it wins the cascade -->
-<link rel="stylesheet" href="/static/classic.css?v=20260719c">
+<link rel="stylesheet" href="/static/classic.css?v=20260719e">
 <script>
   // Boot guard — prevents a flash of the wrong screen before JS decides.
   (function () {
@@ -557,12 +557,12 @@
         <div><div class="eyebrow">24/7 TASKS</div><h2>Always-On Jobs</h2></div>
       </div>
       <p class="jobs-sub">Bots, scrapers, loops — code that keeps running day &amp; night (max 3 jobs). If it crashes, it restarts itself. If your code opens a web server on the <code>PORT</code> env variable (bind <code>0.0.0.0</code>), a public <code>/live/…</code> URL appears under the job — copy &amp; share it.</p>
-      <p class="jobs-note">Live URLs work only while the job is running. For production traffic, deploy as a dedicated web service instead.</p>
+      <p class="jobs-note">Live URLs stay up only while the job runs.</p>
 
       <div class="job-form">
         <div class="job-form-head">
           24/7 RUNNER PANEL
-          <span class="job-form-hint">just paste code — needed libraries install automatically · web servers get a public URL · Ctrl+Enter = start</span>
+          <span class="job-form-hint">Paste code · Ctrl+Enter starts it 24/7 · web servers get a public URL</span>
         </div>
         <div class="job-form-row">
           <input type="text" id="jobName" class="input-text" placeholder="Job name — e.g. telegram-bot" maxlength="60">
@@ -848,7 +848,7 @@
 
 <div class="toast-container" id="toastContainer"></div>
 
-<script src="/static/pro.js?v=20260719c"></script>
+<script src="/static/pro.js?v=20260719e"></script>
 <script>
   // Safety net: never leave the user stuck on the splash — remove the
   // booting class AND hard-hide the splash element, whatever went wrong.

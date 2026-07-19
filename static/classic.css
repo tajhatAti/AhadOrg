@@ -1492,3 +1492,51 @@ body.ed-full { overflow: hidden !important; }
 .side-overlay:not(.hidden),
 .cmd-overlay:not(.hidden),
 .nav-sheet:not(.hidden)         { pointer-events: auto !important; }
+
+/* ============================================================
+§29  PROFESSIONAL MOTION & FEEDBACK
+     - skeleton shimmer replaces the hourglass-emoji placeholders
+     - row-leave: deleted rows slide/fade away before re-render
+     - small busy spinners on action buttons (Publish etc.)
+     - wifi password chip: mono dots in a tidy pill, never a ragged row
+     All motion is short (≤300ms), eased, and respects reduced-motion.
+============================================================ */
+.skel-wrap { display: flex; flex-direction: column; gap: 10px; padding: 4px 2px; }
+.skel-row {
+  display: flex; gap: 12px; align-items: center;
+  padding: 14px; border: 1px solid var(--line) !important;
+  border-radius: var(--r-sm) !important; background: var(--panel) !important;
+}
+.skel-ic { width: 34px; height: 34px; border-radius: 9px; background: var(--panel-2); flex: 0 0 auto; }
+.skel-lines { display: flex; flex-direction: column; gap: 7px; flex: 1; min-width: 0; }
+.skel-bar { display: block; height: 9px; border-radius: 99px; background: var(--panel-2); }
+.skel-bar.w70 { width: 55%; } .skel-bar.w40 { width: 35%; }
+.skel-ic, .skel-bar { animation: skelPulse 1.15s ease-in-out infinite; }
+@keyframes skelPulse { 0%, 100% { opacity: .45; } 50% { opacity: 1; } }
+
+.row-leave { animation: rowLeave .22s ease forwards !important; pointer-events: none !important; }
+@keyframes rowLeave { to { opacity: 0; transform: translateX(10px) scale(.985); } }
+
+/* small busy spinner inside action buttons (.vault-btn / .cs-act) when .loading */
+.vault-btn.loading, .cs-act.loading {
+  opacity: .78 !important; pointer-events: none !important;
+  display: inline-flex !important; align-items: center; gap: 5px;
+}
+.vault-btn.loading::before, .cs-act.loading::before {
+  content: ""; width: 11px; height: 11px; flex: 0 0 auto; border-radius: 50%;
+  border: 2px solid var(--line); border-top-color: var(--acc);
+  animation: spin .7s linear infinite;
+}
+
+/* wifi password: tidy mono chip; dots/pw never stretch the card */
+.wifi-pw-wrap { display: inline-flex !important; align-items: center; gap: 6px; max-width: 100%; vertical-align: middle; }
+.wifi-pw {
+  display: inline-block; max-width: 190px; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; vertical-align: middle;
+  font-family: var(--mono) !important; letter-spacing: 1.5px;
+  background: var(--panel-2); padding: 3px 9px; border-radius: 7px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skel-ic, .skel-bar, .row-leave { animation: none !important; }
+}

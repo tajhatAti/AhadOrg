@@ -914,6 +914,26 @@ function _clearIds(ids) { (ids || []).forEach(i => { const e = document.getEleme
    Every section's loader must ALWAYS end in a real state: data, empty, or a
    clear inline error WITH a retry button. A failed fetch used to leave the
    "Loading…" spinner running forever, which read as a frozen app. */
+/* Professional loading state: Supabase-style shimmering skeleton bars
+   (subtle pulse, no gimmicks) — used by every section while data flies. */
+function _skel(rows = 3) {
+  let h = '<div class="skel-wrap" aria-hidden="true">';
+  for (let i = 0; i < rows; i++) {
+    h += '<div class="skel-row"><span class="skel-ic"></span>' +
+         '<span class="skel-lines"><i class="skel-bar w70"></i><i class="skel-bar w40"></i></span></div>';
+  }
+  return h + "</div>";
+}
+
+/* Delete feedback: row slides/fades away (220ms) before the list re-renders. */
+function _rowOut(btnOrEl) {
+  const row = btnOrEl && btnOrEl.closest &&
+    btnOrEl.closest(".vault-item, .note-card, .bookmark-item, .card-visual, .task-item, .snippet-item, .job-card");
+  if (!row) return Promise.resolve();
+  row.classList.add("row-leave");
+  return new Promise(r => setTimeout(r, 220));
+}
+
 function _loadErrorBox(list, what, retryFn, e) {
   if (!list) return;
   const infra = !!(e && e.kind === "infra");
@@ -983,7 +1003,7 @@ async function saveVault() {
 
 async function loadVault() {
   const list = document.getElementById("vaultList");
-  if (list) list.innerHTML = `<div class="loading-state"><div class="empty-icon">⏳</div><p>Loading vault…</p></div>`;
+  if (list) list.innerHTML = _skel(3);
   try {
     const data = await api("/vault", "GET", null, true);
     const list = document.getElementById("vaultList");
@@ -1004,7 +1024,7 @@ async function loadVault() {
         <div class="vault-actions">
           <button class="vault-btn" onclick='startEditVault(${item.id}, ${JSON.stringify(item.type)}, ${JSON.stringify(item.label)}, ${JSON.stringify(item.value)})'>${ic("pen")} Edit</button>
           <button class="vault-btn" onclick='copyVault(${JSON.stringify(item.value)})'>${ic("copy")} Copy</button>
-          <button class="vault-btn delete" onclick="deleteVault(${item.id})" title="Delete">${ic("trash")}</button>
+          <button class="vault-btn delete" onclick="deleteVault(${item.id}, this)" title="Delete">${ic("trash")}</button>
         </div>
       </div>
     `).join("");
@@ -1020,9 +1040,9 @@ function startEditVault(id, type, label, value) {
   _scrollToEl(document.getElementById("vaultForm"));
 }
 
-async function deleteVault(id) {
+async function deleteVault(id, btn) {
   if (!confirm("Delete this vault item?")) return;
-  try { await api("/vault/delete", "POST", { id }, true); toast("Vault item deleted!", "success"); await loadVault(); await loadStats(); }
+  try { await api("/vault/delete", "POST", { id }, true); toast("Vault item deleted!", "success"); await _rowOut(btn); await loadVault(); await loadStats(); }
   catch (err) { toast(err.message, "error"); }
 }
 
@@ -1055,7 +1075,7 @@ async function saveNote() {
 
 async function loadNotes() {
   const list = document.getElementById("notesList");
-  if (list) list.innerHTML = `<div class="loading-state"><div class="empty-icon">⏳</div><p>Loading notes…</p></div>`;
+  if (list) list.innerHTML = _skel(3);
   try {
     const data = await api("/notes", "GET", null, true);
     const list = document.getElementById("notesList");
@@ -1071,7 +1091,7 @@ async function loadNotes() {
         <div class="note-content">${escapeHtml((note.content || "").substring(0, 120))}${(note.content || "").length > 120 ? "..." : ""}</div>
         <div class="note-date">${new Date(note.created_at).toLocaleDateString()}</div>
         <div class="note-actions" onclick="event.stopPropagation();">
-          <button class="vault-btn delete" onclick="event.stopPropagation(); deleteNote(${note.id})" title="Delete">${ic("trash")}</button>
+          <button class="vault-btn delete" onclick="event.stopPropagation(); deleteNote(${note.id}, this)" title="Delete">${ic("trash")}</button>
         </div>
       </div>
     `).join("");
@@ -1089,13 +1109,14 @@ function startEditNote(id, title, content, color) {
   _scrollToEl(document.getElementById("noteForm"));
 }
 
-async function deleteNote(id) {
+async function deleteNote(id, btn) {
   if (!confirm("Delete this note?")) return;
   try {
     // Note: Some browsers/proxies strip body on DELETE; FastAPI accepts it, but we use POST-mapped DELETE via a workaround.
     // Send via POST tunnel if needed. Actually fetch keeps body on DELETE, so this works.
     await api("/notes", "DELETE", { id }, true);
     toast("Note deleted!", "success");
+    await _rowOut(btn);
     await loadNotes();
     await loadStats();
   } catch (err) { toast(err.message, "error"); }
@@ -1127,7 +1148,7 @@ async function saveBookmark() {
 
 async function loadBookmarks() {
   const list = document.getElementById("bookmarksList");
-  if (list) list.innerHTML = `<div class="loading-state"><div class="empty-icon">⏳</div><p>Loading bookmarks…</p></div>`;
+  if (list) list.innerHTML = _skel(3);
   try {
     const data = await api("/bookmarks", "GET", null, true);
     const list = document.getElementById("bookmarksList");
@@ -1149,7 +1170,7 @@ async function loadBookmarks() {
         <div class="vault-actions">
           <button class="vault-btn" onclick='startEditBookmark(${bm.id}, ${JSON.stringify(bm.title)}, ${JSON.stringify(bm.url)}, ${JSON.stringify(bm.description || "")})'>${ic("pen")} Edit</button>
           <button class="vault-btn" onclick='window.open(${JSON.stringify(bm.url)}, "_blank", "noopener")'>${ic("link")} Open</button>
-          <button class="vault-btn delete" onclick="deleteBookmark(${bm.id})" title="Delete">${ic("trash")}</button>
+          <button class="vault-btn delete" onclick="deleteBookmark(${bm.id}, this)" title="Delete">${ic("trash")}</button>
         </div>
       </div>
     `).join("");
@@ -1166,9 +1187,9 @@ function startEditBookmark(id, title, url, description) {
   _scrollToEl(document.getElementById("bookmarkForm"));
 }
 
-async function deleteBookmark(id) {
+async function deleteBookmark(id, btn) {
   if (!confirm("Delete this bookmark?")) return;
-  try { await api("/bookmarks", "DELETE", { id }, true); toast("Bookmark deleted!", "success"); await loadBookmarks(); await loadStats(); }
+  try { await api("/bookmarks", "DELETE", { id }, true); toast("Bookmark deleted!", "success"); await _rowOut(btn); await loadBookmarks(); await loadStats(); }
   catch (err) { toast(err.message, "error"); }
 }
 
@@ -1219,7 +1240,7 @@ async function saveCard() {
 
 async function loadCards() {
   const list = document.getElementById("cardsList");
-  if (list) list.innerHTML = `<div class="loading-state"><div class="empty-icon">⏳</div><p>Loading cards…</p></div>`;
+  if (list) list.innerHTML = _skel(3);
   try {
     const data = await api("/cards", "GET", null, true);
     if (!data.cards || !data.cards.length) {
@@ -1248,7 +1269,7 @@ async function loadCards() {
         <div class="card-actions">
           <button class="vault-btn" onclick='copyCardNum(${JSON.stringify(c.number)})'>${ic("copy")} Copy</button>
           <button class="vault-btn" onclick='startEditCard(${c.id})'>${ic("pen")} Edit</button>
-          <button class="vault-btn delete" onclick="deleteCard(${c.id})" title="Delete">${ic("trash")}</button>
+          <button class="vault-btn delete" onclick="deleteCard(${c.id}, this)" title="Delete">${ic("trash")}</button>
         </div>
       </div>`;
     }).join("");
@@ -1292,9 +1313,9 @@ async function startEditCard(id) {
   } catch (err) { toast(err.message, "error"); }
 }
 
-async function deleteCard(id) {
+async function deleteCard(id, btn) {
   if (!confirm("Delete this card?")) return;
-  try { await api("/cards", "DELETE", { id }, true); toast("Card deleted!", "success"); logEvent("warning", "Card deleted", ""); await loadCards(); await loadStats(); }
+  try { await api("/cards", "DELETE", { id }, true); toast("Card deleted!", "success"); logEvent("warning", "Card deleted", ""); await _rowOut(btn); await loadCards(); await loadStats(); }
   catch (err) { toast(err.message, "error"); }
 }
 
@@ -1313,6 +1334,7 @@ function _shift(hex, amt) {
 async function loadTasks() {
   const list = document.getElementById("tasksList");
   if (!list) return;
+  if (!list.children.length) list.innerHTML = _skel(3);
   try {
     const data = await api("/tasks", "GET", null, true);
     if (!data.tasks || !data.tasks.length) {
@@ -1324,7 +1346,7 @@ async function loadTasks() {
         <button class="task-check ${t.completed ? "done" : ""}" onclick="toggleTask(${t.id}, ${t.completed ? 0 : 1})">${t.completed ? "✓" : ""}</button>
         <span class="task-title">${escapeHtml(t.title)}</span>
         ${t.priority ? '<span class="task-priority">High</span>' : ""}
-        <button class="task-del" onclick="deleteTask(${t.id})">✕</button>
+        <button class="task-del" onclick="deleteTask(${t.id}, this)">✕</button>
       </div>
     `).join("");
   } catch (err) { console.error("Load tasks error:", err); if (!err || err.kind !== "infra") toast("Could not load tasks: " + err.message, "error"); _loadErrorBox(document.getElementById("tasksList"), "tasks", loadTasks, err); }
@@ -1347,8 +1369,8 @@ async function toggleTask(id, completed) {
   catch (err) { toast(err.message, "error"); }
 }
 
-async function deleteTask(id) {
-  try { await api("/tasks", "DELETE", { id }, true); await loadTasks(); await loadStats(); }
+async function deleteTask(id, btn) {
+  try { await api("/tasks", "DELETE", { id }, true); await _rowOut(btn); await loadTasks(); await loadStats(); }
   catch (err) { toast(err.message, "error"); }
 }
 
@@ -1384,7 +1406,7 @@ async function saveIdentity() {
 }
 async function loadIdentities() {
   const list = document.getElementById("identitiesList");
-  if (list) list.innerHTML = `<div class="loading-state"><div class="empty-icon">⏳</div><p>Loading…</p></div>`;
+  if (list) list.innerHTML = _skel(3);
   try {
     const data = await api("/identities", "GET", null, true);
     if (!data.identities || !data.identities.length) { list.innerHTML = `<div class="empty-state"><div class="empty-icon">${ep("🪪")}</div><p>No identities saved</p><small>Add a passport, licence or ID</small></div>`; return; }
@@ -1394,14 +1416,14 @@ async function loadIdentities() {
         <div class="vault-info"><div class="vault-icon">${ep(icons[it.type] || "📄","secure")}</div>
           <div class="vault-details"><h4>${escapeHtml(it.label)}</h4><p>${_fmtIdentityFields(it.fields)}</p></div></div>
         <div class="vault-actions">
-          <button class="vault-btn delete" onclick="deleteIdentity(${it.id})" title="Delete">${ic("trash")}</button>
+          <button class="vault-btn delete" onclick="deleteIdentity(${it.id}, this)" title="Delete">${ic("trash")}</button>
         </div>
       </div>`).join("");
   } catch (err) { if (!err || err.kind !== "infra") toast("Could not load identities: " + err.message, "error"); _loadErrorBox(document.getElementById("identitiesList"), "identities", loadIdentities, err); }
 }
-async function deleteIdentity(id) {
+async function deleteIdentity(id, btn) {
   if (!confirm("Delete this identity?")) return;
-  try { await api("/identities", "DELETE", { id }, true); toast("Identity deleted!", "success"); await loadIdentities(); }
+  try { await api("/identities", "DELETE", { id }, true); toast("Identity deleted!", "success"); await _rowOut(btn); await loadIdentities(); }
   catch (err) { toast(err.message, "error"); }
 }
 
@@ -1421,7 +1443,7 @@ async function saveContact() {
 }
 async function loadContacts() {
   const list = document.getElementById("contactsList");
-  if (list) list.innerHTML = `<div class="loading-state"><div class="empty-icon">⏳</div><p>Loading…</p></div>`;
+  if (list) list.innerHTML = _skel(3);
   try {
     const data = await api("/contacts", "GET", null, true);
     if (!data.contacts || !data.contacts.length) { list.innerHTML = `<div class="empty-state"><div class="empty-icon">${ep("👥")}</div><p>No contacts yet</p><small>Add people you want to keep close</small></div>`; return; }
@@ -1432,14 +1454,14 @@ async function loadContacts() {
             <p>${c.email ? escapeHtml(c.email) + " " : ""}${c.phone ? escapeHtml(c.phone) : ""}${c.company ? " · " + escapeHtml(c.company) : ""}</p></div></div>
         <div class="vault-actions">
           ${c.phone ? `<button class="vault-btn" onclick='copyText(${JSON.stringify(c.phone)})' title="Copy">${ic("copy")}</button>` : ""}
-          <button class="vault-btn delete" onclick="deleteContact(${c.id})" title="Delete">${ic("trash")}</button>
+          <button class="vault-btn delete" onclick="deleteContact(${c.id}, this)" title="Delete">${ic("trash")}</button>
         </div>
       </div>`).join("");
   } catch (err) { if (!err || err.kind !== "infra") toast("Could not load contacts: " + err.message, "error"); _loadErrorBox(document.getElementById("contactsList"), "contacts", loadContacts, err); }
 }
-async function deleteContact(id) {
+async function deleteContact(id, btn) {
   if (!confirm("Delete this contact?")) return;
-  try { await api("/contacts", "DELETE", { id }, true); toast("Contact deleted!", "success"); await loadContacts(); }
+  try { await api("/contacts", "DELETE", { id }, true); toast("Contact deleted!", "success"); await _rowOut(btn); await loadContacts(); }
   catch (err) { toast(err.message, "error"); }
 }
 
@@ -1492,7 +1514,7 @@ function toggleWifiPw(id) {
 
 async function loadWifi() {
   const list = document.getElementById("wifiList");
-  if (list) list.innerHTML = `<div class="loading-state"><div class="empty-icon">⏳</div><p>Loading…</p></div>`;
+  if (list) list.innerHTML = _skel(3);
   try {
     const data = await api("/wifi", "GET", null, true);
     _wifiCache = data.wifi || [];
@@ -1522,7 +1544,7 @@ function _renderWifi(rows, query) {
         <button class="vault-btn" onclick='showWifiQr(${JSON.stringify(_wifiString(w))}, ${JSON.stringify(w.ssid)})' title="Show join QR">${ic("qr")} QR</button>
         <button class="vault-btn" onclick="shareWifiGuest(${w.id})" title="Share with a guest (1-hour QR link)">${ic("share")} Share</button>
         ${hasPw ? `<button class="vault-btn" onclick="copyWifiPw(${w.id})" title="Copy password">${ic("copy")}</button>` : ""}
-        <button class="vault-btn delete" onclick="deleteWifi(${w.id})" title="Delete">${ic("trash")}</button>
+        <button class="vault-btn delete" onclick="deleteWifi(${w.id}, this)" title="Delete">${ic("trash")}</button>
       </div>
     </div>`;
   }).join("");
@@ -1547,9 +1569,9 @@ async function shareWifiGuest(id) {
     document.body.insertAdjacentHTML("beforeend", html);
   } catch (err) { toast(err.message, "error"); }
 }
-async function deleteWifi(id) {
+async function deleteWifi(id, btn) {
   if (!confirm("Delete this WiFi network?")) return;
-  try { await api("/wifi", "DELETE", { id }, true); toast("WiFi deleted!", "success"); await loadWifi(); }
+  try { await api("/wifi", "DELETE", { id }, true); toast("WiFi deleted!", "success"); await _rowOut(btn); await loadWifi(); }
   catch (err) { toast(err.message, "error"); }
 }
 async function showWifiQr(text, name) {
@@ -1579,7 +1601,7 @@ async function saveServer() {
 }
 async function loadServers() {
   const list = document.getElementById("serversList");
-  if (list) list.innerHTML = `<div class="loading-state"><div class="empty-icon">⏳</div><p>Loading…</p></div>`;
+  if (list) list.innerHTML = _skel(3);
   try {
     const data = await api("/servers", "GET", null, true);
     if (!data.servers || !data.servers.length) { list.innerHTML = `<div class="empty-state"><div class="empty-icon">${ep("🖥️")}</div><p>No servers saved</p><small>Store SSH / host credentials</small></div>`; return; }
@@ -1591,14 +1613,14 @@ async function loadServers() {
         <div class="vault-actions">
           <button class="vault-btn" onclick='copyText(${JSON.stringify("ssh " + (s.username||"") + "@" + s.host + " -p " + (s.port||22))})'>📋</button>
           ${s.password ? `<button class="vault-btn" onclick='copyText(${JSON.stringify(s.password)})' title="Copy password">${ic("key")}</button>` : ""}
-          <button class="vault-btn delete" onclick="deleteServer(${s.id})" title="Delete">${ic("trash")}</button>
+          <button class="vault-btn delete" onclick="deleteServer(${s.id}, this)" title="Delete">${ic("trash")}</button>
         </div>
       </div>`).join("");
   } catch (err) { if (!err || err.kind !== "infra") toast("Could not load servers: " + err.message, "error"); _loadErrorBox(document.getElementById("serversList"), "servers", loadServers, err); }
 }
-async function deleteServer(id) {
+async function deleteServer(id, btn) {
   if (!confirm("Delete this server?")) return;
-  try { await api("/servers", "DELETE", { id }, true); toast("Server deleted!", "success"); await loadServers(); }
+  try { await api("/servers", "DELETE", { id }, true); toast("Server deleted!", "success"); await _rowOut(btn); await loadServers(); }
   catch (err) { toast(err.message, "error"); }
 }
 
@@ -1615,7 +1637,7 @@ async function saveRecovery() {
 }
 async function loadRecovery() {
   const list = document.getElementById("recoveryList");
-  if (list) list.innerHTML = `<div class="loading-state"><div class="empty-icon">⏳</div><p>Loading…</p></div>`;
+  if (list) list.innerHTML = _skel(3);
   try {
     const data = await api("/recovery", "GET", null, true);
     if (!data.recovery || !data.recovery.length) { list.innerHTML = `<div class="empty-state"><div class="empty-icon">${ep("🌱","teal")}</div><p>No recovery phrases saved</p><small>Store crypto seed phrases securely</small></div>`; return; }
@@ -1627,7 +1649,7 @@ async function loadRecovery() {
         <div class="vault-actions">
           <button class="vault-btn" onclick='revealRecovery(${r.id}, ${JSON.stringify(r.words)})'>${ic("eye")}</button>
           <button class="vault-btn" onclick='copyText(${JSON.stringify(r.words)})' title="Copy">${ic("copy")}</button>
-          <button class="vault-btn delete" onclick="deleteRecovery(${r.id})" title="Delete">${ic("trash")}</button>
+          <button class="vault-btn delete" onclick="deleteRecovery(${r.id}, this)" title="Delete">${ic("trash")}</button>
         </div>
       </div>`).join("");
   } catch (err) { if (!err || err.kind !== "infra") toast("Could not load recovery phrases: " + err.message, "error"); _loadErrorBox(document.getElementById("recoveryList"), "recovery phrases", loadRecovery, err); }
@@ -1638,9 +1660,9 @@ function revealRecovery(id, words) {
   if (el.dataset.shown === "1") { el.dataset.shown = "0"; el.textContent = "•••• •••• ••••"; el.classList.add("recovery-hidden"); return; }
   el.dataset.shown = "1"; el.textContent = words; el.classList.remove("recovery-hidden");
 }
-async function deleteRecovery(id) {
+async function deleteRecovery(id, btn) {
   if (!confirm("Permanently delete this recovery phrase?")) return;
-  try { await api("/recovery", "DELETE", { id }, true); toast("Recovery phrase deleted!", "success"); await loadRecovery(); }
+  try { await api("/recovery", "DELETE", { id }, true); toast("Recovery phrase deleted!", "success"); await _rowOut(btn); await loadRecovery(); }
   catch (err) { toast(err.message, "error"); }
 }
 
@@ -1827,7 +1849,7 @@ function _formatCSS(src) { return src.replace(/\s*\{\s*/g, " {\n  ").replace(/;\
 async function loadSnippets() {
   const list = document.getElementById("snippetsList");
   if (!list) return;
-  list.innerHTML = '<div class="loading-state"><div class="empty-icon">⏳</div><p>Loading…</p></div>';
+  list.innerHTML = _skel(3);
   try {
     const data = await api("/snippets", "GET", null, true);
     const snips = data.snippets || [];
@@ -1845,8 +1867,8 @@ async function loadSnippets() {
           '<div class="snippet-actions">' +
             '<button class="vault-btn" onclick="loadSnippetIntoEditor(' + s.id + ')">' + ic("folder-open") + ' Open</button>' +
             '<button class="vault-btn" onclick="copySnippetCode(' + s.id + ')">' + ic("copy") + ' Copy</button>' +
-            '<button class="vault-btn" onclick="toggleSnippetShare(' + s.id + ')">' + (shared ? ic("globe") + " Unpublish" : ic("rocket") + " Publish") + '</button>' +
-            '<button class="vault-btn delete" onclick="deleteSnippet(' + s.id + ')" title="Delete">' + ic("trash") + '</button>' +
+            '<button class="vault-btn" onclick="toggleSnippetShare(' + s.id + ', ' + (shared ? 1 : 0) + ', this)">' + (shared ? ic("globe") + " Unpublish" : ic("rocket") + " Publish") + '</button>' +
+            '<button class="vault-btn delete" onclick="deleteSnippet(' + s.id + ', this)" title="Delete">' + ic("trash") + '</button>' +
           '</div>' +
         '</div>' +
         '<pre class="snippet-code"><code>' + escapeHtml(preview) + ((s.content || "").length > 120 ? "\n…" : "") + '</code></pre>' +
@@ -1873,27 +1895,27 @@ async function loadSnippetIntoEditor(id) {
   } catch (err) { toast(err.message, "error"); }
 }
 
-async function deleteSnippet(id) {
+async function deleteSnippet(id, btn) {
   if (!confirm("Delete this snippet?")) return;
-  try { await api("/snippets", "DELETE", { id }, true); toast("Snippet deleted!", "success"); if (editingSnippetId === id) newSnippetDraft(); await loadSnippets(); }
+  try { await api("/snippets", "DELETE", { id }, true); toast("Snippet deleted!", "success"); if (editingSnippetId === id) newSnippetDraft(); await _rowOut(btn); await loadSnippets(); }
   catch (err) { toast(err.message, "error"); }
 }
 
 /* Share the snippet currently in the editor (creates if unsaved). */
 async function shareCurrentSnippet() {
-  let id = editingSnippetId;
-  if (!id) { id = await saveSnippet(true); }
-  if (!id) return;
-  await toggleSnippetShare(id);
+  const btn = document.getElementById("btnShareSnippet");
+  const oldLabel = btn ? btn.textContent : "";
+  if (btn && !btn.classList.contains("loading")) btn.textContent = "Publishing…";
+  try {
+    let id = editingSnippetId;
+    if (!id) { id = await saveSnippet(true); }
+    if (!id) return;
+    await toggleSnippetShare(id, undefined, btn);
+  } finally {
+    if (btn) btn.textContent = oldLabel;
+  }
 }
 
-async function toggleSnippetShare(id) {
-  let nowShared = false;
-  try {
-    const data = await api("/snippets", "GET", null, true);
-    const s = (data.snippets || []).find(x => x.id === id);
-    nowShared = !!(s && s.share_token && s.is_public);
-  } catch (e) {}
 // Visible published-link bar under the studio header: link + Open + Copy.
 function showPubBar(url) {
   let bar = document.getElementById("pubBar");
@@ -1922,11 +1944,25 @@ function showPubBar(url) {
   bar.querySelector("#pubClose").addEventListener("click", () => { bar.style.display = "none"; });
 }
 
+async function toggleSnippetShare(id, shared, btn) {
+  let nowShared = !!shared;
+  if (shared === undefined || shared === null || typeof shared === "object") {
+    // Studio flow: no cached state (or the button got passed through) —
+    // look it up once. The snippets-list row flow skips this extra GET.
+    if (btn === undefined && shared && shared.tagName) btn = shared;
+    try {
+      const data = await api("/snippets", "GET", null, true);
+      const s = (data.snippets || []).find(x => x.id === id);
+      nowShared = !!(s && s.share_token && s.is_public);
+    } catch (e) {}
+  }
+  setLoading(btn, true);
   try {
     const res = await api("/snippets/share", "POST", { id, share: !nowShared }, true);
     if (res.share && res.url) {
-      const origin = window.location.origin + window.location.pathname.replace(/index\.html$/, "").replace(/\/$/, "");
-      const full = origin + res.url;
+      // BUGFIX: origin only — never origin+pathname — or the broken
+      // /code/s/<tok> link happens when publishing from the Code tab.
+      const full = window.location.origin + res.url;
       showPubBar(full);   // visible, tappable link — never silently clipboard-only
       try { await navigator.clipboard.writeText(full); } catch (e) { /* bar already shows the link */ }
       toast("Published! Your page is live", "success");
@@ -1937,7 +1973,9 @@ function showPubBar(url) {
     }
     await loadSnippets();
   } catch (err) { toast(err.message, "error"); }
+  finally { setLoading(btn, false); }
 }
+
 
 async function copySnippetCode(id) {
   try {
@@ -3115,6 +3153,7 @@ let _lastJobsSig = ""; // change detection: skip re-render when nothing moved
 async function loadJobs() {
   const list = document.getElementById("jobsList");
   if (!list) return;
+  if (!_lastJobsSig) list.innerHTML = _skel(2);
   try {
     const data = await api("/api/jobs", "GET", null, true);
     // Flicker guard: rebuild the list ONLY when statuses actually changed
@@ -3145,7 +3184,7 @@ function renderJobs(jobs) {
   if (!jobs.length) {
     const div = document.createElement("div");
     div.className = "jobs-empty";
-    div.innerHTML = ic("zap") + ' No jobs yet — paste code above and press <b>Start 24/7</b>. If your code opens a web port ($PORT), its public URL appears right here.';
+    div.innerHTML = ic("zap") + ' No jobs yet — paste code above and press <b>Start 24/7</b>.';
     list.appendChild(div);
     return;
   }
@@ -3199,7 +3238,7 @@ function renderJobs(jobs) {
     mkBtn(ic("history") + " Logs", "", () => viewJobLogs(j.id, j.name));
     mkBtn(ic("refresh") + " Restart", "", () => restartJobById(j.id));
     mkBtn(ic("square") + " Stop", "", () => stopJobById(j.id));
-    mkBtn(ic("trash"), "danger", () => deleteJobById(j.id));
+    mkBtn(ic("trash"), "danger", (e) => deleteJobById(j.id, e.currentTarget));
     list.appendChild(card);
   });
 }
@@ -3255,12 +3294,13 @@ async function restartJobById(id) {
   } catch (e) { toast(e.message, "error"); }
 }
 
-async function deleteJobById(id) {
+async function deleteJobById(id, btn) {
   if (!confirm("Delete this job permanently?")) return;
   try {
     await api(`/api/jobs/${id}`, "DELETE", null, true);
     closeJobLogs();
     toast("Job deleted", "info");
+    await _rowOut(btn);
     loadJobs();
   } catch (e) { toast(e.message, "error"); }
 }
