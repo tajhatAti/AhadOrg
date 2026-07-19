@@ -2670,13 +2670,21 @@ async function createAndOpenJob() {
   const language = document.getElementById("newJobLang").value;
   if (!name) { toast("App name is required", "error"); return; }
   
+  const btn = document.getElementById("btnCreateJob");
+  setLoading(btn, true);
   try {
     const info = await api("/api/jobs", "POST", { name, language, code: "# New " + language + " app\nprint('Hello World')" }, true);
     closeNewJobModal();
     toast("App created!", "success");
-    openIde(info.id);
-    loadJobs();
-  } catch (e) { toast(e.message, "error"); }
+    await loadJobs();
+    if (info && info.id) {
+        openIde(info.id);
+    }
+  } catch (e) { 
+    toast(e.message, "error"); 
+  } finally {
+    setLoading(btn, false);
+  }
 }
 
 async function openIde(jobId) {
