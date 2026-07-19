@@ -391,48 +391,98 @@
     <!-- RUNSPACE — free 24/7 hosting (Telegram bots, scrapers, APIs) -->
     <div class="dash-tab-content" id="tab-jobs">
       <div class="tab-head">
-        <div><div class="eyebrow">FREE HOSTING · 24/7</div><h2>RunSpace</h2></div>
-      </div>
-      <p class="jobs-sub">Your Telegram bot, scraper, API or any loop — deployed in seconds and kept running day &amp; night, <b>free</b> (up to 3 apps). It restarts itself if it crashes. Open a web server on the <code>PORT</code> env variable (bind <code>0.0.0.0</code>) and a public <code>/live/…</code> URL appears under the app — copy &amp; share it.</p>
-      <p class="jobs-note">Libraries in your imports install by themselves · live URLs stay up while the app runs.</p>
-
-      <div class="job-form">
-        <div class="job-form-head">
-          DEPLOY PANEL
-          <span class="job-form-hint">Paste code · Ctrl+Enter deploys · web servers get a public URL</span>
-        </div>
-        <div class="job-form-row">
-          <input type="text" id="jobName" class="input-text" placeholder="App name — e.g. my-tg-bot" maxlength="60">
-          <select id="jobLang" class="input-text job-lang">
-            <option value="python">python</option>
-            <option value="javascript">javascript</option>
-            <option value="bash">bash</option>
-            <option value="ruby">ruby</option>
-            <option value="php">php</option>
-          </select>
-        </div>
-        <textarea id="jobCode" class="input-textarea tall mono" spellcheck="false" placeholder="# Paste ANY code — a Telegram bot, a scraper, an API.
-# Imports (telegram, requests, bs4…) install BY THEMSELVES.
-# Press Deploy 24/7 — it stays online and restarts if it crashes.
-# Open a web server on 0.0.0.0:$PORT for a free public /live/… URL."></textarea>
-        <div class="form-actions">
-          <button class="btn-primary sm" id="btnStartJob">Deploy 24/7</button>
+        <div><div class="eyebrow">DEVELOPER CONSOLE</div><h2>RunSpace</h2></div>
+        <div class="tab-actions">
+          <button class="btn-primary sm" onclick="openNewJobModal()">+ New App</button>
         </div>
       </div>
-
-      <div class="jobs-list" id="jobsList"></div>
-
-      <div class="jobs-log" id="jobLogBox" style="display:none">
-        <div class="jobs-log-head">
-          <span id="jobLogTitle">logs</span>
-          <span class="jobs-log-actions">
-            <button class="jobs-log-btn" id="jobLogCopy" title="Copy full logs">⧉ Copy</button>
-            <button class="jobs-log-btn" id="jobLogFull" title="Full view">⤢ Full</button>
-            <button class="jobs-log-btn" id="jobLogRefresh" title="Refresh">⟳</button>
-            <button class="jobs-log-btn" id="jobLogClose" title="Close">✕</button>
-          </span>
+      
+      <!-- IDE-Style Interface -->
+      <div class="ide-container" id="ideContainer" style="display:none">
+        <div class="ide-topbar">
+          <div class="ide-job-info">
+            <span class="ide-status-dot" id="ideStatusDot"></span>
+            <span class="ide-job-name" id="ideJobName">No app selected</span>
+            <span class="ide-lang-pill" id="ideJobLang">python</span>
+          </div>
+          <div class="ide-actions">
+            <button class="ide-btn run" id="ideRunBtn">▶ Run</button>
+            <button class="ide-btn stop" id="ideStopBtn">■ Stop</button>
+            <button class="ide-btn" id="ideRestartBtn"> Restart</button>
+            <button class="ide-btn" id="ideCloseBtn">✕ Close</button>
+          </div>
         </div>
-        <pre class="jobs-log-body" id="jobLogBody"></pre>
+        
+        <div class="ide-url-bar" id="ideUrlBar" style="display:none">
+          <a href="#" target="_blank" class="ide-url-pill" id="idePublicUrl">
+            <svg class="ic" style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            <span id="ideUrlText">loading...</span>
+          </a>
+          <button class="vault-btn" id="ideCopyUrlBtn" style="padding:2px 8px;font-size:10px">Copy</button>
+        </div>
+
+        <div class="ide-main">
+          <div class="ide-editor-pane">
+            <div class="ide-pane-head">
+              <span>EDITOR</span>
+              <div style="display:flex;gap:10px">
+                <button class="vault-btn" onclick="document.getElementById('ideFileInput').click()">Upload File</button>
+                <input type="file" id="ideFileInput" style="display:none" onchange="handleIdeFileUpload(event)">
+                <button class="vault-btn" id="ideSaveBtn">Save</button>
+              </div>
+            </div>
+            <div class="ide-code-area">
+              <div class="ide-gutter" id="ideGutter">1</div>
+              <textarea id="ideEditor" class="ide-textarea" spellcheck="false" placeholder="Write your code here..."></textarea>
+              <div class="ide-file-upload" id="ideDropZone">
+                <p>Drop file here to upload</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="ide-terminal-pane">
+            <div class="ide-pane-head">
+              <span>TERMINAL / LOGS</span>
+              <button class="vault-btn" id="ideClearTermBtn">Clear</button>
+            </div>
+            <div class="ide-terminal-body" id="ideTerminal">
+              <div class="t-line"><span class="t-prompt">$</span> Select an app to view logs...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Apps Grid (shown when no IDE is active) -->
+      <div id="jobsGrid" class="jobs-list" style="margin-top:20px"></div>
+
+      <!-- New Job Modal -->
+      <div id="newJobModal" class="auth hidden" style="background:rgba(0,0,0,0.8);backdrop-filter:blur(4px)">
+        <div class="auth-card">
+          <div class="auth-head">
+            <div class="eyebrow">NEW APP</div>
+            <h2>Deploy to RunSpace</h2>
+          </div>
+          <div class="auth-form">
+            <div class="field">
+              <span>APP NAME</span>
+              <input type="text" id="newJobName" placeholder="my-bot-name" maxlength="30">
+            </div>
+            <div class="field">
+              <span>LANGUAGE</span>
+              <select id="newJobLang" class="input-select">
+                <option value="python">Python 3</option>
+                <option value="javascript">Node.js</option>
+                <option value="bash">Bash Script</option>
+                <option value="php">PHP</option>
+                <option value="ruby">Ruby</option>
+              </select>
+            </div>
+            <div class="form-actions">
+              <button class="btn-primary block" onclick="createAndOpenJob()">Create & Open IDE</button>
+              <button class="btn-ghost block" onclick="closeNewJobModal()">Cancel</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 

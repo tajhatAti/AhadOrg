@@ -2651,8 +2651,199 @@ async function confirmAdminAction() {
   }
 }
 
-// Enter inside the admin 2FA box = confirm. (Wired once at boot.)
-(function () {
-  const box = document.getElementById("adminTfaCode");
-  if (box) box.addEventListener("keydown", (e) => { if (e.key === "Enter") confirmAdminAction(); });
-})();
+
+/* ==================== IDE LOGIC ==================== */
+let _activeIdeJob = null;
+let _ideLogAutoScroll = true;
+
+function openNewJobModal() {
+  document.getElementById("newJobName").value = "";
+  document.getElementById("newJobModal").classList.remove("hidden");
+}
+
+function closeNewJobModal() {
+  document.getElementById("newJobModal").classList.add("hidden");
+}
+
+async function createAndOpenJob() {
+  const name = document.getElementById("newJobName").value.trim();
+  const language = document.getElementById("newJobLang").value;
+  if (!name) { toast("App name is required", "error"); return; }
+  
+  try {
+    const info = await api("/api/jobs", "POST", { name, language, code: "# New " + language + " app\nprint('Hello World')" }, true);
+    closeNewJobModal();
+    toast("App created!", "success");
+    openIde(info.id);
+    loadJobs();
+  } catch (e) { toast(e.message, "error"); }
+}
+
+async function openIde(jobId) {
+  try {
+    const data = await api("/api/jobs", "GET", null, true);
+    const job = (data.jobs || []).find(j => j.runner_job_id === jobId || j.id === jobId);
+    if (!job) return;
+
+    _activeIdeJob = job;
+    document.getElementById("jobsGrid").style.display = "none";
+    document.getElementById("ideContainer").style.display = "flex";
+    
+    document.getElementById("ideJobName").textContent = job.name;
+    document.getElementById("ideJobLang").textContent = job.language;
+    
+    // In a real app, we'd fetch the full code for this job here.
+    // For now, let's assume it's part of the job object or we fetch it.
+    const fullJob = await api(`/api/jobs/${job.id || job.runner_job_id}/logs`, "GET", null, true);
+    document.getElementById("ideEditor").value = job.code || ""; 
+    
+    updateIdeStatus(job.status);
+    
+    if (job.web && job.web_url) {
+      document.getElementById("ideUrlBar").style.display = "flex";
+      document.getElementById("ideUrlText").textContent = job.web_url;
+      document.getElementById("idePublicUrl").href = job.web_url;
+    } else {
+      document.getElementById("ideUrlBar").style.display = "none";
+    }
+
+    startIdeLogStream(job.runner_job_id || job.id);
+  } catch (e) { toast("Failed to open IDE", "error"); }
+}
+
+function closeIde() {
+  _activeIdeJob = null;
+  stopIdeLogStream();
+  document.getElementById("ideContainer").style.display = "none";
+  document.getElementById("jobsGrid").style.display = "block";
+}
+
+function updateIdeStatus(status) {
+  const dot = document.getElementById("ideStatusDot");
+  dot.className = "ide-status-dot " + (status || "offline").toLowerCase();
+}
+
+function startIdeLogStream(jobId) {
+  stopIdeLogStream();
+  const term = document.getElementById("ideTerminal");
+  term.innerHTML = '<div class="t-line"><span class="t-sys">Connecting to logs...</span></div>';
+  
+  try {
+    const es = new EventSource(`/api/jobs/${jobId}/logs/stream?token=${encodeURIComponent(authToken || "")}`);
+    window._ideES = es;
+    es.onmessage = (ev) => {
+      const data = JSON.parse(ev.data);
+      appendIdeLog(data.logs);
+      updateIdeStatus(data.status);
+    };
+    es.onerror = () => {
+      es.close();
+      appendIdeLog("\n[System] Connection lost. Retrying...", true);
+    };
+  } catch (e) {}
+}
+
+function stopIdeLogStream() {
+  if (window._ideES) {
+    window._ideES.close();
+    window._ideES = null;
+  }
+}
+
+function appendIdeLog(text, isError = false) {
+  const term = document.getElementById("ideTerminal");
+  if (!text) return;
+  
+  const div = document.createElement("div");
+  div.className = "t-line" + (isError ? " t-err" : "");
+  div.textContent = text;
+  term.appendChild(div);
+  
+  if (_ideLogAutoScroll) {
+    term.scrollTop = term.scrollHeight;
+  }
+}
+
+async function handleIdeFileUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    document.getElementById("ideEditor").value = ev.target.result;
+    updateLineNumbers();
+    toast("File loaded into editor", "info");
+  };
+  reader.readAsText(file);
+}
+
+function updateLineNumbers() {
+  const textarea = document.getElementById("ideEditor");
+  const gutter = document.getElementById("ideGutter");
+  const lines = textarea.value.split('\n').length;
+  gutter.innerHTML = Array.from({length: lines}, (_, i) => i + 1).join('<br>');
+}
+
+// Wire up events
+document.addEventListener("DOMContentLoaded", () => {
+  const editor = document.getElementById("ideEditor");
+  if (editor) {
+    editor.addEventListener("input", updateLineNumbers);
+    editor.addEventListener("scroll", () => {
+      document.getElementById("ideGutter").scrollTop = editor.scrollTop;
+    });
+  }
+  
+  const term = document.getElementById("ideTerminal");
+  if (term) {
+    term.addEventListener("scroll", () => {
+      _ideLogAutoScroll = term.scrollTop + term.clientHeight >= term.scrollHeight - 20;
+    });
+  }
+  
+  document.getElementById("ideRunBtn")?.addEventListener("click", () => {
+    if (_activeIdeJob) restartJobById(_activeIdeJob.id || _activeIdeJob.runner_job_id);
+  });
+  
+  document.getElementById("ideStopBtn")?.addEventListener("click", () => {
+    if (_activeIdeJob) stopJobById(_activeIdeJob.id || _activeIdeJob.runner_job_id);
+  });
+
+  document.getElementById("ideCloseBtn")?.addEventListener("click", closeIde);
+  
+  document.getElementById("ideClearTermBtn")?.addEventListener("click", () => {
+    document.getElementById("ideTerminal").innerHTML = "";
+  });
+});
+
+// Override original renderJobs to use our new grid
+function renderJobs(jobs) {
+  const grid = document.getElementById("jobsGrid");
+  if (!grid) return;
+  grid.innerHTML = "";
+  
+  if (!jobs.length) {
+    grid.innerHTML = '<div class="jobs-empty">No apps deployed. Click "+ New App" to start.</div>';
+    return;
+  }
+  
+  jobs.forEach(j => {
+    const st = (j.status || "offline").toLowerCase();
+    const card = document.createElement("div");
+    card.className = "job-card";
+    card.style.cursor = "pointer";
+    card.onclick = () => openIde(j.runner_job_id || j.id);
+    
+    card.innerHTML = `
+      <div class="job-top">
+        <span class="job-dot ${st}"></span>
+        <span class="job-name">${escapeHtml(j.name)}</span>
+        <span class="ide-lang-pill">${escapeHtml(j.language)}</span>
+        <div class="job-actions">
+           <button class="job-btn sm">Open IDE</button>
+        </div>
+      </div>
+      <div class="job-meta">Status: ${st} ${j.uptime_s ? ' · up ' + _fmtUptime(j.uptime_s) : ''}</div>
+    `;
+    grid.appendChild(card);
+  });
+}
