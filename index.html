@@ -392,8 +392,24 @@
     <div class="dash-tab-content" id="tab-jobs">
       <div class="tab-head">
         <div><div class="eyebrow">DEVELOPER CONSOLE</div><h2>RunSpace</h2></div>
-        <div class="tab-actions">
-          <button class="btn-primary sm" onclick="openNewJobModal()">+ New App</button>
+      </div>
+
+      <!-- Quick Create Form (Direct) -->
+      <div class="job-form" id="directJobForm" style="margin-bottom: 20px;">
+        <div class="job-form-head">
+          CREATE NEW APP
+          <span class="job-form-hint">Deploy a bot or scraper in seconds</span>
+        </div>
+        <div class="job-form-row">
+          <input type="text" id="newJobName" class="input-text" placeholder="App name (e.g. my-bot)" maxlength="30">
+          <select id="newJobLang" class="input-text job-lang">
+            <option value="python">python</option>
+            <option value="javascript">javascript</option>
+            <option value="bash">bash</option>
+            <option value="php">php</option>
+            <option value="ruby">ruby</option>
+          </select>
+          <button class="btn-primary sm" id="btnCreateJob" onclick="createAndOpenJob()">Deploy & Open IDE</button>
         </div>
       </div>
       
@@ -660,34 +676,5 @@
     if (s && !s.classList.contains('hidden')) { s.classList.add('hidden'); s.style.display = 'none'; }
   }, 4000);
 </script>
-  <!-- New Job Modal -->
-  <div id="newJobModal" class="auth hidden" style="background:rgba(0,0,0,0.8);backdrop-filter:blur(4px);z-index:9001">
-    <div class="auth-card">
-      <div class="auth-head">
-        <div class="eyebrow">NEW APP</div>
-        <h2>Deploy to RunSpace</h2>
-      </div>
-      <div class="auth-form">
-        <div class="field">
-          <span>APP NAME</span>
-          <input type="text" id="newJobName" placeholder="my-bot-name" maxlength="30">
-        </div>
-        <div class="field">
-          <span>LANGUAGE</span>
-          <select id="newJobLang" class="input-select">
-            <option value="python">Python 3</option>
-            <option value="javascript">Node.js</option>
-            <option value="bash">Bash Script</option>
-            <option value="php">PHP</option>
-            <option value="ruby">Ruby</option>
-          </select>
-        </div>
-        <div class="form-actions">
-          <button class="btn-primary block" id="btnCreateJob" onclick="createAndOpenJob()">Create & Open IDE</button>
-          <button class="btn-ghost block" onclick="closeNewJobModal()">Cancel</button>
-        </div>
-      </div>
-    </div>
-  </div>
 </body>
 </html>

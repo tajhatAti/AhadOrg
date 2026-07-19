@@ -2674,8 +2674,8 @@ async function createAndOpenJob() {
   setLoading(btn, true);
   try {
     const info = await api("/api/jobs", "POST", { name, language, code: "# New " + language + " app\nprint('Hello World')" }, true);
-    closeNewJobModal();
     toast("App created!", "success");
+    document.getElementById("newJobName").value = "";
     await loadJobs();
     if (info && info.id) {
         openIde(info.id);
