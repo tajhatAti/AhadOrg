@@ -1453,3 +1453,42 @@ body.ed-full { overflow: hidden !important; }
   padding: 8px 10px; margin: 0 0 16px; word-break: break-all; text-align: left;
 }
 .fatal-btns { display: flex; gap: 10px; justify-content: center; }
+
+/* ============================================================
+§28  HIT-TEST SAFETY — an inactive full-viewport layer must NEVER
+     intercept clicks.
+     ------------------------------------------------------------
+     Root cause of the site-wide "all clicks dead" bug: a CLOSED
+     .ah-modal kept painting an invisible wall over the whole app.
+     Its own rule (§23) says `display:flex !important` and appears
+     AFTER the generic `.hidden{display:none !important}` — equal
+     specificity means source order wins, so the modal stayed
+     rendered with only opacity:0 at z-index 5500, eating every
+     click. Scrolling looked fine, every button was dead.
+
+     Defence, two layers, for EVERY viewport-covering diner:
+       1. explicit `.X.hidden { display:none !important }` with
+          higher specificity than the open rule
+       2. `:not(.open) { pointer-events:none }` so even mid-fade
+          or future cascade accidents can't re-block the page.
+============================================================ */
+.ah-modal.hidden                      { display: none !important; }
+.ah-modal:not(.open)                  { pointer-events: none !important; }
+.ah-modal.open                        { pointer-events: auto !important; }
+
+/* same safeguard for the rest of the full-viewport family.
+   Note: these overlays use "no .hidden class" as their VISIBLE state
+   (verified against openSideMenu/openCommandPalette/etc. in pro.js) —
+   so idle = .hidden (or .ah-modal without .open). */
+.more-overlay,
+.activity-overlay,
+.side-overlay,
+.cmd-overlay,
+.nav-sheet                      { pointer-events: none !important; }
+.ah-modal:not(.open)            { pointer-events: none !important; }
+.ah-modal.open                  { pointer-events: auto !important; }
+.more-overlay:not(.hidden),
+.activity-overlay:not(.hidden),
+.side-overlay:not(.hidden),
+.cmd-overlay:not(.hidden),
+.nav-sheet:not(.hidden)         { pointer-events: auto !important; }
