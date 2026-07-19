@@ -80,12 +80,6 @@ r = c.post("/2fa/verify-login", json={"token": "bogus", "code": "000000"}); chec
 r = c.post("/2fa/disable", json={"password": "Pw-matrix-1", "code": stale_code}, headers=H2); check("POST /2fa/disable (stale code correctly dead)", r, (400,))
 r = c.post("/2fa/disable", json={"password": "Pw-matrix-1", "code": fresh_code}, headers=H2); check("POST /2fa/disable (fresh backup code)", r)
 
-# ---------- api keys ----------
-r = c.get("/api-keys", headers=H2); check("GET /api-keys", r)
-r = c.post("/api-keys", json={"name": "matrix-key"}, headers=H2); check("POST /api-keys", r)
-key_id = r.json().get("id") or (r.json().get("key") or {}).get("id")
-r = c.post("/api-keys/revoke", json={"key_id": key_id or 0}, headers=H2); check("POST /api-keys/revoke", r, (200, 400, 404))
-
 # ---------- section CRUD ----------
 def crud(section, create, update_key_id, update):
     r = c.post(section, json=create, headers=H2); check(f"POST {section} (create)", r, (200, 201))
@@ -104,36 +98,8 @@ def vault_crud():
     if vid:
         r = c.post("/vault/update", json={"id": vid, "type": "password", "label": "G2", "value": "v2"}, headers=H2); check("POST /vault/update", r)
         r = c.post("/vault/delete", json={"id": vid}, headers=H2); check("POST /vault/delete", r)
-crud("/notes", {"title": "n1", "content": "body", "color": "yellow"}, "id", {"title": "n2", "content": "b2", "color": "blue"})
-crud("/bookmarks", {"title": "b", "url": "https://x.dev", "description": "d"}, "id", {"title": "b2", "url": "https://y.dev", "description": "d2"})
-crud("/cards", {"label": "Visa", "holder": "AHAD", "brand": "visa", "number": "4111111111111111", "expiry": "12/30", "cvv": "123", "note": ""}, "id", {"label": "Visa2", "holder": "A", "brand": "visa", "number": "4111", "expiry": "12/30", "cvv": "123", "note": ""})
-crud("/tasks", {"title": "do thing"}, "id", {"title": "do thing 2"})
-crud("/identities", {"type": "passport", "label": "PP", "fields": {}}, "id", {"type": "passport", "label": "PP2", "fields": {}})
-crud("/contacts", {"name": "Amma", "email": "a@c.dev", "phone": "017", "company": "", "address": "Dhaka", "note": ""}, "id", {"name": "Amma2", "email": "a@c.dev", "phone": "017", "company": "", "address": "Dhaka", "note": ""})
-crud("/wifi", {"label": "Home", "ssid": "AhadHome", "password": "pw", "security": "WPA2", "location": "TV", "hidden": False}, "id", {"label": "Home2", "ssid": "AhadHome", "password": "pw2", "security": "WPA2", "location": "TV", "hidden": False})
-crud("/servers", {"name": "vps", "host": "1.2.3.4", "port": 22, "username": "root", "password": "x", "note": ""}, "id", {"name": "vps2", "host": "1.2.3.4", "port": 2222, "username": "root", "password": "x", "note": ""})
-crud("/recovery", {"label": "Ledger", "words": "a b c d"}, "id", {"label": "Ledger2", "words": "e f g h"})
-vault_crud()
 crud("/snippets", {"title": "hello", "language": "python", "content": "print(1)"}, "id", {"title": "hello2", "language": "python", "content": "print(2)"})
 
-r = c.get("/categories", headers=H2); check("GET /categories", r)
-r = c.post("/categories", json={"name": "work"}, headers=H2); check("POST /categories", r, (200, 201, 400))
-cat_id = r.json().get("id")
-if cat_id:
-    r = c.put("/categories", json={"id": cat_id, "name": "work2"}, headers=H2); check("PUT /categories", r)
-    r = c.request("DELETE", "/categories", json={"id": cat_id}, headers=H2); check("DELETE /categories", r)
-
-# wifi share + public page
-r = c.post("/wifi", json={"label": "ShareNet", "ssid": "SN", "password": "pw", "security": "WPA2"}, headers=H2)
-wid = r.json()["id"]
-r = c.post(f"/wifi/{wid}/share", headers=H2); check("POST /wifi/{id}/share", r)
-path = r.json()["url"].replace("http://testserver", "")
-r = c.get(path); check("GET /w/{token} (public QR page)", r)
-r = c.get(path); check("GET /w/{token} again (burned, graceful)", r, (410,))
-
-# qr + search + snippets publish
-r = c.get("/qr?q=test", headers=H2); check("GET /qr (?q= frontend form)", r)
-r = c.get("/qr?text=test2", headers=H2); check("GET /qr (?text= legacy form)", r)
 r = c.get("/search?q=amma", headers=H2); check("GET /search", r)
 r = c.post("/snippets", json={"title": "pub", "language": "html", "content": "<h1>hi</h1>"}, headers=H2)
 sid = r.json()["id"]
@@ -161,16 +127,22 @@ r = c.delete(f"/api/jobs/{jid}", headers=H2); check("DELETE /api/jobs/{id}", r)
 # ---------- misc ----------
 r = c.get("/preferences", headers=H2); check("GET /preferences", r)
 r = c.put("/preferences", json={"theme": "light", "language": "en", "timezone": "Asia/Dhaka", "notifications_enabled": True, "email_notifications": False}, headers=H2); check("PUT /preferences", r)
-r = c.post("/generate-password", json={"length": 16}, headers=H2); check("POST /generate-password", r, (200, 201, 400))
-r = c.get("/notifications", headers=H2); check("GET /notifications", r)
-r = c.post("/notifications/read-all", json={}, headers=H2); check("POST /notifications/read-all", r)
-r = c.post("/notifications/read?notification_id=0", headers=H2); check("POST /notifications/read (graceful)", r)
-r = c.delete("/notifications?notification_id=0", headers=H2); check("DELETE /notifications (graceful)", r)
 r = c.get("/activity-log", headers=H2); check("GET /activity-log", r)
 r = c.post("/activity-log", json={"action": "matrix-test", "details": "x"}, headers=H2); check("POST /activity-log", r, (200, 201, 400))
 r = c.get("/stats", headers=H2); check("GET /stats", r)
-r = c.get("/export-data", headers=H2); check("GET /export-data", r)
 # 2FA is disabled by now, so a plain current+new password change must succeed.
+# ---------- the vault is GONE — not hidden, GONE ----------
+for dead in ("/vault", "/notes", "/bookmarks", "/cards", "/tasks", "/identities",
+             "/contacts", "/wifi", "/servers", "/recovery", "/seeds",
+             "/api-keys", "/notifications", "/export-data", "/generate-password",
+             "/qr?q=x", "/categories"):
+    rr = c.get(dead, headers=H2)
+    check(f"dead route {dead} → 404/405", rr, (404, 405))
+
+r = c.get("/terms"); check("GET /terms (ToS page)", r)
+r = c.get("/report-abuse"); check("GET /report-abuse", r)
+r = c.post("/report-abuse", json={"url": "https://example.onrender.com/live/x", "reason": "spam test"}); check("POST /report-abuse", r, (200, 201))
+
 r = c.post("/account/change-password", json={"current_password": "Pw-matrix-1", "new_password": "Pw-matrix-2"}, headers=H2); check("POST /account/change-password", r)
 r = c.post("/logout", headers=H2); check("POST /logout", r)
 

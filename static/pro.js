@@ -1,6 +1,6 @@
 /* =========================================
-   AHAD CO - COMPLETE FUNCTIONALITY
-   Vault, Notes, Bookmarks - All Working
+   AHAD CO — RunSpace: free code hosting
+   Code Studio · 24/7 jobs · published pages
    ========================================= */
 
 const API = "";
@@ -8,12 +8,9 @@ let signupUsername = "";
 let authToken = localStorage.getItem("ahad_token") || null;
 let resendTimerInterval = null;
 let currentTab = "overview";
+let editingSnippetId = null;
+let _livePreviewTimer = null;
 
-// Editing state
-let editingNoteId = null;
-let editingBookmarkId = null;
-let editingVaultId = null;
-let selectedNoteColor = "#6366f1";
 
 /* ---------------- SCREEN NAV ---------------- */
 function showScreen(id) {
@@ -80,9 +77,7 @@ function switchTab(tabId) {
   const t = document.getElementById(`tab-${tabId}`);
   t.classList.add("active");
   // Sync mobile bottom-nav highlight (map extra tabs back to "more").
-  const map = { vault: "more", cards: "more", identities: "more", contacts: "more",
-    wifi: "more", servers: "more", recovery: "more", notes: "more",
-    bookmarks: "more", tasks: "more", profile: "more", admin: "more" };
+  const map = { profile: "more", admin: "more" };
   document.querySelectorAll(".bn-item").forEach(b => {
     b.classList.toggle("active", b.dataset.tab === (map[tabId] || tabId));
   });
@@ -416,101 +411,42 @@ function escapeHtml(text) {
 /* ---------------- APP ICON SYSTEM (ONE outline family, Lucide-style) --------
    Inside the authenticated app there are NO colorful emoji icons — every
    glyph comes from this single stroke-icon set (24×24, stroke=currentColor,
-   1.7 width, round caps). ic("lock") → inline SVG. ep() is kept as the
-   compatibility shim: old call sites pass emoji, it maps them to icons.
+   1.7 width, round caps). ic("lock") → inline SVG.
 */
 const _IC_PATHS = {
   lock:        '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
-  card:        '<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10.5h18"/><path d="M6.5 15h4"/>',
-  note:        '<path d="M6 3.5h8.5L19 8v12.5H6z"/><path d="M14 3.5V8H19M9 12h6M9 15.5h6"/>',
-  bookmark:    '<path d="M7.5 20V4h9v16l-4.5-3.8z"/>',
-  tasks:       '<rect x="4" y="4" width="16" height="16" rx="2.5"/><path d="M8.5 12.5l2.5 2.5 4.8-5.5"/>',
-  calendar:    '<rect x="4" y="5.5" width="16" height="15" rx="2"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/>',
-  plus:        '<path d="M12 5.5v13M5.5 12h13"/>',
-  'file-plus': '<path d="M6 3.5h8.5L19 8v12.5H6z"/><path d="M14 3.5V8H19M12 11.5v6M9 14.5h6"/>',
-  search:      '<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>',
   moon:        '<path d="M20 14.5A8.5 8.5 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5z"/>',
   sun:         '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5 5l1.8 1.8M17.2 17.2 19 19M5 19l1.8-1.8M17.2 6.8 19 5"/>',
   phone:       '<rect x="7.5" y="3" width="9" height="18" rx="2"/><path d="M11 17.5h2"/>',
-  mail:        '<rect x="3.5" y="5.5" width="17" height="13" rx="2"/><path d="M4.5 7.5 12 13l7.5-5.5"/>',
-  key:         '<circle cx="8" cy="14.5" r="4.5"/><path d="M11.2 11.3 19.5 3M15.8 6.7l3 3"/>',
   link:        '<path d="M10.5 13.5a4.2 4.2 0 0 0 6 0l3-3a4.24 4.24 0 1 0-6-6l-1.5 1.5"/><path d="M13.5 10.5a4.2 4.2 0 0 0-6 0l-3 3a4.24 4.24 0 1 0 6 6l1.5-1.5"/>',
-  folder:      '<path d="M3.5 7A2.5 2.5 0 0 1 6 4.5h3.5L12 7h6a2.5 2.5 0 0 1 2.5 2.5v7A2.5 2.5 0 0 1 18 19H6a2.5 2.5 0 0 1-2.5-2.5z"/>',
-  'id-card':   '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2.2"/><path d="M5.8 16c.7-1.7 1.8-2.6 3.2-2.6s2.5.9 3.2 2.6M15.5 9.5h3M15.5 13h3"/>',
-  users:       '<circle cx="9" cy="8" r="3"/><path d="M3.5 19c.9-3 3-4.5 5.5-4.5s4.6 1.5 5.5 4.5"/><path d="M15.5 5.4a3 3 0 0 1 0 5.2M18 14.9c1.3.7 2.2 2 2.6 4.1"/>',
-  wifi:        '<path d="M4 10a11.5 11.5 0 0 1 16 0M7 13.5a7.5 7.5 0 0 1 10 0M10 17a3.8 3.8 0 0 1 4 0"/><circle cx="12" cy="19.5" r="1.1" fill="currentColor" stroke="none"/>',
   server:      '<rect x="4" y="4" width="16" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="16" height="6.5" rx="1.5"/><path d="M8 7.3h.01M8 16.8h.01M12.5 7.3H17M12.5 16.8H17"/>',
-  leaf:        '<path d="M5.5 18.5C5.5 9.5 12 4.5 20 4.5c0 8-5 14-14.5 14z"/><path d="M5.5 18.5c3-5 7-8.5 11-10.5"/>',
-  book:        '<path d="M5 4.5h11A2.5 2.5 0 0 1 18.5 7v12.5H7.5A2.5 2.5 0 0 1 5 17z"/><path d="M8.5 8.5h6"/>',
-  car:         '<path d="M5 12.5 6.8 7.2A2 2 0 0 1 8.7 5.8h6.6a2 2 0 0 1 1.9 1.4L19 12.5"/><rect x="3.5" y="12.5" width="17" height="5" rx="1.5"/><path d="M7 15h.01M17 15h.01"/>',
-  home:        '<path d="M4 11 12 4l8 7"/><path d="M6 9.5V20h12V9.5"/>',
-  receipt:     '<path d="M6 3.5h12V20l-2-1.4-2 1.4-2-1.4L10 20l-2-1.4L6 20z"/><path d="M9 8.5h6M9 12h6"/>',
   file:        '<path d="M6 3.5h8.5L19 8v12.5H6z"/><path d="M14 3.5V8H19"/>',
-  pen:         '<path d="M14.8 5.2a2.1 2.1 0 0 1 3 3L8.5 17.5 4.8 18.4l.9-3.7z"/><path d="M13.2 6.8l3 3"/>',
   copy:        '<rect x="8.5" y="8.5" width="11" height="12" rx="2"/><path d="M15.5 8.5V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7.5a2 2 0 0 0 2 2h2.5"/>',
   trash:       '<path d="M4.5 6.5h15M9.5 6.2V4.8A1.3 1.3 0 0 1 10.8 3.5h2.4a1.3 1.3 0 0 1 1.3 1.3v1.4"/><path d="M6.5 6.5 7.4 19a1.6 1.6 0 0 0 1.6 1.5h6a1.6 1.6 0 0 0 1.6-1.5l.9-12.5"/><path d="M10.2 10.5v6M13.8 10.5v6"/>',
-  pin:         '<path d="M9.5 3.5h5l-.7 6 3 3v2H7.2v-2l3-3z"/><path d="M12 14.5V21"/>',
   eye:         '<path d="M2.8 12S6.3 5.8 12 5.8 21.2 12 21.2 12 17.8 18.2 12 18.2 2.8 12 2.8 12z"/><circle cx="12" cy="12" r="2.8"/>',
   globe:       '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5a13.5 13.5 0 0 1 0 17M12 3.5a13.5 13.5 0 0 0 0 17"/>',
-  'map-pin':   '<path d="M12 21s-6.8-5.6-6.8-10.8a6.8 6.8 0 1 1 13.6 0C18.8 15.4 12 21 12 21z"/><circle cx="12" cy="10" r="2.4"/>',
-  ticket:      '<path d="M4.5 8.5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v1.3a2.7 2.7 0 1 0 0 5.4v1.3a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2v-1.3a2.7 2.7 0 1 0 0-5.4z"/><path d="M12 8v1.6M12 11.6v1.6M12 15.2v1.3"/>',
   shield:      '<path d="M12 3.5 5 6v5.5c0 4.5 3 7.6 7 9 4-1.4 7-4.5 7-9V6z"/><path d="M9.2 11.8l2 2 3.6-4"/>',
   alert:       '<path d="M12 4 2.8 19.5h18.4z"/><path d="M12 10v4.2M12 17.2v.1"/>',
   refresh:     '<path d="M20 5.5v5h-5"/><path d="M19.5 10.5a8 8 0 1 0 .7 4"/>',
   download:    '<path d="M12 4v11M7.5 11 12 15.5 16.5 11"/><path d="M4.5 19.5h15"/>',
   history:     '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2.2"/>',
-  bell:        '<path d="M6 9a6 6 0 1 1 12 0c0 5 2 6.5 2 6.5H4S6 14 6 9"/><path d="M10.3 20a2 2 0 0 0 3.4 0"/>',
   'log-out':   '<path d="M14.5 4.5H7a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h7.5"/><path d="M10.5 12h10M17 8.5l3.5 3.5-3.5 3.5"/>',
   rocket:      '<path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/>',
   'folder-open':'<path d="M3.5 7A2.5 2.5 0 0 1 6 4.5h3.5L12 7h6a2.5 2.5 0 0 1 2.2 1.3"/><path d="M3.5 7h14.3a2 2 0 0 1 1.9 2.6l-1.8 6.2A2.5 2.5 0 0 1 15.5 18H5a2.5 2.5 0 0 1-2.5-2.5z"/>',
-  chart:       '<path d="M4 20.5h16"/><path d="M7 16.5v-4M12 16.5v-9M17 16.5v-6.5"/>',
   zap:         '<path d="M13 2 5 13.5h5L8.8 22l8-11.5h-5L13 2z"/>',
   code:        '<path d="M9 8l-4.5 4L9 16M15 8l4.5 4L15 16"/>',
-  maximize:    '<path d="M8.5 3.5h-3a2 2 0 0 0-2 2v3M15.5 3.5h3a2 2 0 0 1 2 2v3M8.5 20.5h-3a2 2 0 0 1-2-2v-3M15.5 20.5h3a2 2 0 0 0 2-2v-3"/>',
   minimize:    '<path d="M5.5 9.5h3a1.5 1.5 0 0 0 1.5-1.5v-3M15.5 9.5h3a1.5 1.5 0 0 1 1.5 1.5v-3M5.5 14.5h3A1.5 1.5 0 0 1 10 16v3M15.5 14.5h3a1.5 1.5 0 0 0-1.5 1.5v3"/>',
   play:        '<path d="M8 5.2v13.6c0 .9 1 1.5 1.8 1L20 13a1.2 1.2 0 0 0 0-2L9.8 4.3A1.2 1.2 0 0 0 8 5.2z"/>',
   check:       '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
   square:      '<rect x="6.5" y="6.5" width="11" height="11" rx="2"/>',
   x:           '<path d="M6 6l12 12M18 6 6 18"/>',
   info:        '<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 7.6v.1"/>',
-  database:    '<ellipse cx="12" cy="5.5" rx="7.5" ry="2.7"/><path d="M4.5 5.5v13c0 1.5 3.4 2.7 7.5 2.7s7.5-1.2 7.5-2.7v-13"/><path d="M4.5 12c0 1.5 3.4 2.7 7.5 2.7s7.5-1.2 7.5-2.7"/>',
-  qr:          '<rect x="4" y="4" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1"/><path d="M13.8 13.8h2.7v2.7h-2.7zM17 17h3v3h-3z"/>',
-  user:        '<circle cx="12" cy="8.3" r="3.4"/><path d="M5.5 19.6c1.2-3.3 3.7-5 6.5-5s5.3 1.7 6.5 5"/>',
-  save:        '<path d="M5 4.5h11L19.5 8v11.5h-15z"/><path d="M8 4.5v4.5h7V4.5M8 19.5v-6h8v6"/>',
-  sparkle:     '<path d="M12 3.5 13.9 9l5.6 1.9-5.6 1.9L12 18.4l-1.9-5.6L4.5 10.9 10.1 9z"/>',
   external:    '<path d="M14.5 4h5.5v5.5"/><path d="M20 4 11 13"/><path d="M19 13.5V17a2.5 2.5 0 0 1-2.5 2.5h-10A2.5 2.5 0 0 1 4 17V7a2.5 2.5 0 0 1 2.5-2.5H10"/>',
-  share:       '<circle cx="17.5" cy="5.5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="17.5" cy="18.5" r="2.5"/><path d="m8.2 10.8 6.8-4M8.2 13.2l6.8 4"/>',
-  'eye-off':   '<path d="M4.5 4.5l15 15"/><path d="M9.9 5.1A10 10 0 0 1 12 5c5.7 0 9.2 7 9.2 7a16.6 16.6 0 0 1-2.9 3.8M6 7.5A15.9 15.9 0 0 0 2.8 12S6.3 19 12 19a9.4 9.4 0 0 0 4.4-1.1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
 };
 
 function ic(name, cls) {
   const p = _IC_PATHS[name] || _IC_PATHS.file;
   return `<svg class="ic${cls ? " " + cls : ""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
-}
-
-/* emoji → icon bridge for every legacy call site (list renderers, empty
-   states, palette). Unknown emoji fall back to a neutral file icon. */
-const _EMOJI_TO_IC = {
-  "🔐": "lock", "🔒": "lock", "🔑": "key", "💳": "card", "📝": "note",
-  "🔖": "bookmark", "✅": "tasks", "☑️": "tasks", "📅": "calendar",
-  "": "plus", "✨": "sparkle", "🔍": "search", "🌙": "moon", "☀️": "sun",
-  "📱": "phone", "📧": "mail", "🔗": "link", "📁": "folder", "📂": "folder-open",
-  "🪪": "id-card", "👥": "users", "👤": "user", "📶": "wifi", "🖥️": "server",
-  "🌱": "leaf", "🛂": "book", "🚗": "car", "🏠": "home", "🧾": "receipt",
-  "📄": "file", "✏️": "pen", "📋": "copy", "🗑️": "trash", "📌": "pin",
-  "👁️": "eye", "🌐": "globe", "📍": "map-pin", "🎟️": "ticket", "🛡️": "shield",
-  "⚠️": "alert", "⚠": "alert", "🔄": "refresh", "📤": "download", "📜": "history",
-  "🔔": "bell", "🚪": "log-out", "🚀": "rocket", "📊": "chart", "⚡": "zap",
-  "💾": "save", "🔥": "zap", "🎉": "check", "👋": "user", "🗄️": "database",
-  "💣": "alert", "❤️": "check", "⭐": "sparkle", "💎": "sparkle", "💯": "check",
-  "✉️": "mail", "📞": "phone", "🪙": "card",
-};
-function ep(emoji, _ignored) {
-  if (emoji && _IC_PATHS[emoji]) return ic(emoji);          // already an icon name
-  const name = _EMOJI_TO_IC[emoji];
-  if (name) return ic(name);
-  if (emoji === "</>") return ic("code");
-  return ic("file");
 }
 
 /* ---------------- PASSWORD STRENGTH ---------------- */
@@ -876,11 +812,6 @@ async function loadDashboard() {
     document.getElementById("profilePhone").value = profile.phone || "";
     document.getElementById("profileCode").value = profile.custom_code || "";
 
-    if (profile.created_at) {
-      const created = new Date(profile.created_at);
-      const days = Math.floor((new Date() - created) / (1000 * 60 * 60 * 24));
-      document.getElementById("statDays").textContent = days || 1;
-    }
     _lastProfile = profile;
     applyAdminVisibility(profile);
     refreshSecurityPanel();
@@ -902,7 +833,7 @@ async function loadDashboard() {
   //    use the buttons and retry. Don't collapse the whole UI on a section
   //    failure, and never clear the token here.
   try {
-    await Promise.all([loadVault(), loadCards(), loadNotes(), loadBookmarks(), loadTasks(), loadIdentities(), loadContacts(), loadWifi(), loadServers(), loadRecovery(), loadSnippets()]);
+    await Promise.all([loadSnippets()]);
   } catch (err) {
     console.error("Section load error (non-fatal):", err);
   }
@@ -939,7 +870,7 @@ function _skel(rows = 3) {
 /* Delete feedback: row slides/fades away (220ms) before the list re-renders. */
 function _rowOut(btnOrEl) {
   const row = btnOrEl && btnOrEl.closest &&
-    btnOrEl.closest(".vault-item, .note-card, .bookmark-item, .card-visual, .task-item, .snippet-item, .job-card");
+    btnOrEl.closest(".snippet-item, .job-card");
   if (!row) return Promise.resolve();
   row.classList.add("row-leave");
   return new Promise(r => setTimeout(r, 220));
@@ -958,728 +889,16 @@ function _loadErrorBox(list, what, retryFn, e) {
       ? "The free-plan server is starting — this retries by itself (about a minute)."
       : escapeHtml((e && e.message) || "Something went wrong")) + '</span></div>';
   const btn = document.createElement("button");
-  btn.className = "vault-btn";
+  btn.className = "xbtn";
   btn.innerHTML = ic("refresh") + " Retry";
   btn.addEventListener("click", () => { retryFn(); });
   box.appendChild(btn);
   list.appendChild(box);
 }
-const _ADD_FORMS = {
-  vault:     { form: "vaultForm",    btn: "btnAddVault",    add: "＋ Add new",      hide: "Hide", clear: () => { _clearIds(["vaultType","vaultLabel","vaultValue"]); editingVaultId = null; } },
-  card:      { form: "cardForm",     btn: "btnAddCard",     add: "＋ Add card",     hide: "Hide", clear: () => { _clearIds(["cardLabel","cardHolder","cardBrand","cardNumber","cardExpiry","cardCvv","cardNote"]); editingCardId = null; } },
-  identity:  { form: "identityForm", btn: "btnAddIdentity", add: "＋ Add ID",       hide: "Hide", clear: () => { _clearIds(["identityType","identityLabel","identityFields"]); editingIdentityId = null; } },
-  contact:   { form: "contactForm",  btn: "btnAddContact",  add: "＋ Add contact",  hide: "Hide", clear: () => { _clearIds(["contactName","contactCompany","contactEmail","contactPhone","contactAddress","contactNote"]); } },
-  wifi:      { form: "wifiForm",     btn: "btnAddWifi",     add: "＋ Add WiFi",     hide: "Hide", clear: () => { _clearIds(["wifiLabel","wifiSsid","wifiPassword","wifiLocation"]); } },
-  server:    { form: "serverForm",   btn: "btnAddServer",   add: "＋ Add server",   hide: "Hide", clear: () => { _clearIds(["serverName","serverHost","serverPort","serverUsername","serverPassword","serverNote"]); } },
-  recovery:  { form: "recoveryForm", btn: "btnAddRecovery", add: "＋ Add phrase",   hide: "Hide", clear: () => { _clearIds(["recoveryLabel","recoveryWords"]); } },
-  note:      { form: "noteForm",     btn: "btnAddNote",     add: "＋ New note",     hide: "Hide", clear: () => { _clearIds(["noteTitle","noteContent"]); editingNoteId = null; } },
-  bookmark:  { form: "bookmarkForm", btn: "btnAddBookmark", add: "＋ Add bookmark", hide: "Hide", clear: () => { _clearIds(["bookmarkTitle","bookmarkUrl","bookmarkDesc"]); editingBookmarkId = null; } },
-};
-function _setAddForm(key, open) {
-  const c = _ADD_FORMS[key];
-  if (!c) return;
-  const f = document.getElementById(c.form), b = document.getElementById(c.btn);
-  if (!f || !b) return;
-  if (open === undefined) open = f.classList.contains("hidden");  // read CURRENT state, then flip
-  f.classList.toggle("hidden", !open);
-  b.textContent = open ? c.hide : c.add;
-  if (!open && c.clear) c.clear();
-}
 
-/* ==================== VAULT ==================== */
-/* Null-safe smooth scroll — never crash if an element isn't mounted yet. */
+/* Null-safe smooth scroll — never crash if an element is not mounted yet. */
 function _scrollToEl(el) { if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); }
-function showVaultForm() { _setAddForm("vault", true); }
 
-function hideVaultForm() { _setAddForm("vault", false); }
-
-async function saveVault() {
-  const type = document.getElementById("vaultType").value;
-  const label = document.getElementById("vaultLabel").value.trim();
-  const value = document.getElementById("vaultValue").value.trim();
-  if (!label || !value) { toast("Label and Value are required!", "error"); return; }
-  try {
-    if (editingVaultId) {
-      await api("/vault/update", "POST", { id: editingVaultId, type, label, value }, true);
-      toast("Vault item updated!", "success");
-    } else {
-      await api("/vault/add", "POST", { type, label, value }, true);
-      toast("Vault item saved!", "success");
-    }
-    hideVaultForm();
-    await loadVault();
-    await loadStats();
-  } catch (err) { toast(err.message, "error"); }
-}
-
-async function loadVault() {
-  const list = document.getElementById("vaultList");
-  if (list) list.innerHTML = _skel(3);
-  try {
-    const data = await api("/vault", "GET", null, true);
-    const list = document.getElementById("vaultList");
-    if (!data.entries || data.entries.length === 0) {
-      list.innerHTML = `<div class="empty-state"><div class="empty-icon">${ep("🔐","secure")}</div><p>Your vault is empty</p><small>Click "Add New" to save your first item</small></div>`;
-      return;
-    }
-    const icons = { phone: "📱", email: "📧", code: "🔑", link: "🔗", note: "📝", password: "🔐", secret_file: "📁", file: "📁" };
-    list.innerHTML = data.entries.map(item => `
-      <div class="vault-item" data-id="${item.id}">
-        <div class="vault-info">
-          <div class="vault-icon">${ep(icons[item.type] || "📄", item.type === "password" ? "secure" : "premium")}</div>
-          <div class="vault-details">
-            <h4>${escapeHtml(item.label)}</h4>
-            <p>${escapeHtml(item.value)}</p>
-          </div>
-        </div>
-        <div class="vault-actions">
-          <button class="vault-btn" onclick='startEditVault(${item.id}, ${JSON.stringify(item.type)}, ${JSON.stringify(item.label)}, ${JSON.stringify(item.value)})'>${ic("pen")} Edit</button>
-          <button class="vault-btn" onclick='copyVault(${JSON.stringify(item.value)})'>${ic("copy")} Copy</button>
-          <button class="vault-btn delete" onclick="deleteVault(${item.id}, this)" title="Delete">${ic("trash")}</button>
-        </div>
-      </div>
-    `).join("");
-  } catch (err) { console.error("Load vault error:", err); if (!err || err.kind !== "infra") toast("Could not load vault: " + err.message, "error"); _loadErrorBox(document.getElementById("vaultList"), "vault", loadVault, err); }
-}
-
-function startEditVault(id, type, label, value) {
-  editingVaultId = id;
-  document.getElementById("vaultType").value = type;
-  document.getElementById("vaultLabel").value = label;
-  document.getElementById("vaultValue").value = value;
-  _setAddForm("vault", true);
-  _scrollToEl(document.getElementById("vaultForm"));
-}
-
-async function deleteVault(id, btn) {
-  if (!confirm("Delete this vault item?")) return;
-  try { await api("/vault/delete", "POST", { id }, true); toast("Vault item deleted!", "success"); await _rowOut(btn); await loadVault(); await loadStats(); }
-  catch (err) { toast(err.message, "error"); }
-}
-
-function copyVault(value) {
-  navigator.clipboard.writeText(value).then(() => toast("Copied to clipboard!", "success"));
-}
-
-/* ==================== NOTES ==================== */
-function showNoteForm() { _setAddForm("note", true); }
-
-function hideNoteForm() { _setAddForm("note", false); }
-
-async function saveNote() {
-  const title = document.getElementById("noteTitle").value.trim();
-  const content = document.getElementById("noteContent").value.trim();
-  if (!title || !content) { toast("Title and Content are required!", "error"); return; }
-  try {
-    if (editingNoteId) {
-      await api("/notes", "PUT", { id: editingNoteId, title, content, color: selectedNoteColor }, true);
-      toast("Note updated!", "success");
-    } else {
-      await api("/notes", "POST", { title, content, color: selectedNoteColor }, true);
-      toast("Note saved!", "success");
-    }
-    hideNoteForm();
-    await loadNotes();
-    await loadStats();
-  } catch (err) { toast(err.message, "error"); }
-}
-
-async function loadNotes() {
-  const list = document.getElementById("notesList");
-  if (list) list.innerHTML = _skel(3);
-  try {
-    const data = await api("/notes", "GET", null, true);
-    const list = document.getElementById("notesList");
-    if (!data.notes || data.notes.length === 0) {
-      list.innerHTML = `<div class="empty-state"><div class="empty-icon">${ep("📝")}</div><p>No notes yet</p><small>Create your first note</small></div>`;
-      const sn = document.getElementById("statNotes"); if (sn) sn.textContent = 0;
-      return;
-    }
-    list.innerHTML = data.notes.map(note => `
-      <div class="note-card" style="border-top: 4px solid ${note.color || "#6366f1"}" onclick='startEditNote(${note.id}, ${JSON.stringify(note.title)}, ${JSON.stringify(note.content)}, ${JSON.stringify(note.color || "#6366f1")})'>
-        ${note.pinned ? `<div class="pin-badge">${ic("pin")}</div>` : ""}
-        <div class="note-header"><div class="note-title">${escapeHtml(note.title)}</div></div>
-        <div class="note-content">${escapeHtml((note.content || "").substring(0, 120))}${(note.content || "").length > 120 ? "..." : ""}</div>
-        <div class="note-date">${new Date(note.created_at).toLocaleDateString()}</div>
-        <div class="note-actions" onclick="event.stopPropagation();">
-          <button class="vault-btn delete" onclick="event.stopPropagation(); deleteNote(${note.id}, this)" title="Delete">${ic("trash")}</button>
-        </div>
-      </div>
-    `).join("");
-    const sn = document.getElementById("statNotes"); if (sn) sn.textContent = data.notes.length;
-  } catch (err) { console.error("Load notes error:", err); if (!err || err.kind !== "infra") toast("Could not load notes: " + err.message, "error"); _loadErrorBox(document.getElementById("notesList"), "notes", loadNotes, err); }
-}
-
-function startEditNote(id, title, content, color) {
-  editingNoteId = id;
-  document.getElementById("noteTitle").value = title;
-  document.getElementById("noteContent").value = content;
-  selectedNoteColor = color || "#6366f1";
-  document.querySelectorAll(".color-btn").forEach(b => b.classList.toggle("active", b.dataset.color === selectedNoteColor));
-  _setAddForm("note", true);
-  _scrollToEl(document.getElementById("noteForm"));
-}
-
-async function deleteNote(id, btn) {
-  if (!confirm("Delete this note?")) return;
-  try {
-    // Note: Some browsers/proxies strip body on DELETE; FastAPI accepts it, but we use POST-mapped DELETE via a workaround.
-    // Send via POST tunnel if needed. Actually fetch keeps body on DELETE, so this works.
-    await api("/notes", "DELETE", { id }, true);
-    toast("Note deleted!", "success");
-    await _rowOut(btn);
-    await loadNotes();
-    await loadStats();
-  } catch (err) { toast(err.message, "error"); }
-}
-
-/* ==================== BOOKMARKS ==================== */
-function showBookmarkForm() { _setAddForm("bookmark", true); }
-
-function hideBookmarkForm() { _setAddForm("bookmark", false); }
-
-async function saveBookmark() {
-  const title = document.getElementById("bookmarkTitle").value.trim();
-  const url = document.getElementById("bookmarkUrl").value.trim();
-  const description = document.getElementById("bookmarkDesc").value.trim();
-  if (!title || !url) { toast("Title and URL are required!", "error"); return; }
-  try {
-    if (editingBookmarkId) {
-      await api("/bookmarks", "PUT", { id: editingBookmarkId, title, url, description }, true);
-      toast("Bookmark updated!", "success");
-    } else {
-      await api("/bookmarks", "POST", { title, url, description }, true);
-      toast("Bookmark saved!", "success");
-    }
-    hideBookmarkForm();
-    await loadBookmarks();
-    await loadStats();
-  } catch (err) { toast(err.message, "error"); }
-}
-
-async function loadBookmarks() {
-  const list = document.getElementById("bookmarksList");
-  if (list) list.innerHTML = _skel(3);
-  try {
-    const data = await api("/bookmarks", "GET", null, true);
-    const list = document.getElementById("bookmarksList");
-    if (!data.bookmarks || data.bookmarks.length === 0) {
-      list.innerHTML = `<div class="empty-state"><div class="empty-icon">${ep("🔖")}</div><p>No bookmarks yet</p><small>Save your favorite links</small></div>`;
-      const sb = document.getElementById("statBookmarks"); if (sb) sb.textContent = 0;
-      return;
-    }
-    list.innerHTML = data.bookmarks.map(bm => `
-      <div class="bookmark-item">
-        <div class="bookmark-info">
-          <div class="bookmark-icon">${ep("🌐","teal")}</div>
-          <div class="bookmark-details">
-            <h4>${escapeHtml(bm.title)}</h4>
-            <a href="${escapeHtml(bm.url)}" target="_blank" rel="noopener">${escapeHtml(bm.url)}</a>
-            ${bm.description ? `<p>${escapeHtml(bm.description)}</p>` : ""}
-          </div>
-        </div>
-        <div class="vault-actions">
-          <button class="vault-btn" onclick='startEditBookmark(${bm.id}, ${JSON.stringify(bm.title)}, ${JSON.stringify(bm.url)}, ${JSON.stringify(bm.description || "")})'>${ic("pen")} Edit</button>
-          <button class="vault-btn" onclick='window.open(${JSON.stringify(bm.url)}, "_blank", "noopener")'>${ic("link")} Open</button>
-          <button class="vault-btn delete" onclick="deleteBookmark(${bm.id}, this)" title="Delete">${ic("trash")}</button>
-        </div>
-      </div>
-    `).join("");
-    const sb = document.getElementById("statBookmarks"); if (sb) sb.textContent = data.bookmarks.length;
-  } catch (err) { console.error("Load bookmarks error:", err); if (!err || err.kind !== "infra") toast("Could not load bookmarks: " + err.message, "error"); _loadErrorBox(document.getElementById("bookmarksList"), "bookmarks", loadBookmarks, err); }
-}
-
-function startEditBookmark(id, title, url, description) {
-  editingBookmarkId = id;
-  document.getElementById("bookmarkTitle").value = title;
-  document.getElementById("bookmarkUrl").value = url;
-  document.getElementById("bookmarkDesc").value = description || "";
-  _setAddForm("bookmark", true);
-  _scrollToEl(document.getElementById("bookmarkForm"));
-}
-
-async function deleteBookmark(id, btn) {
-  if (!confirm("Delete this bookmark?")) return;
-  try { await api("/bookmarks", "DELETE", { id }, true); toast("Bookmark deleted!", "success"); await _rowOut(btn); await loadBookmarks(); await loadStats(); }
-  catch (err) { toast(err.message, "error"); }
-}
-
-/* ==================== CARDS ==================== */
-let editingCardId = null;
-let selectedCardColor = "#6366f1";
-
-function showCardForm() { _setAddForm("card", true); }
-function hideCardForm() { _setAddForm("card", false); }
-
-function _formatCardNumber(digits) {
-  return digits.replace(/(.{4})/g, "$1 ").trim();
-}
-function _maskNumber(num) {
-  const d = (num || "").replace(/\D/g, "");
-  if (d.length <= 4) return d;
-  return "•••• •••• •••• " + d.slice(-4);
-}
-
-async function saveCard() {
-  const label = document.getElementById("cardLabel").value.trim();
-  const number = document.getElementById("cardNumber").value;
-  if (!label) { toast("Label is required!", "error"); return; }
-  const payload = {
-    label,
-    holder: document.getElementById("cardHolder").value.trim(),
-    number,
-    expiry: document.getElementById("cardExpiry").value.trim(),
-    cvv: document.getElementById("cardCvv").value.trim(),
-    brand: document.getElementById("cardBrand").value.trim(),
-    note: document.getElementById("cardNote").value.trim(),
-    color: selectedCardColor,
-  };
-  try {
-    if (editingCardId) {
-      await api("/cards", "PUT", Object.assign({ id: editingCardId }, payload), true);
-      toast("Card updated!", "success");
-    } else {
-      await api("/cards", "POST", payload, true);
-      toast("Card saved!", "success");
-    }
-    logEvent("success", "Card saved", label);
-    hideCardForm();
-    await loadCards();
-    await loadStats();
-  } catch (err) { toast(err.message, "error"); }
-}
-
-async function loadCards() {
-  const list = document.getElementById("cardsList");
-  if (list) list.innerHTML = _skel(3);
-  try {
-    const data = await api("/cards", "GET", null, true);
-    if (!data.cards || !data.cards.length) {
-      list.innerHTML = `<div class="empty-state"><div class="empty-icon">${ep("💳","fire")}</div><p>No cards saved</p><small>Click “Add card” to store a payment card</small></div>`;
-      return;
-    }
-    list.innerHTML = data.cards.map(c => {
-      const color = c.color || "#6366f1";
-      const grad = `linear-gradient(135deg, ${color}, ${_shift(color, 35)})`;
-      return `
-      <div class="card-wrap">
-        <div class="card-visual" style="background:${grad}" onclick='revealCard(${c.id})' data-id="${c.id}">
-          <div class="cv-top">
-            <span class="cv-brand">${escapeHtml(c.brand || "Card")}</span>
-            <span class="cv-label">${escapeHtml(c.label)}</span>
-          </div>
-          <div>
-            <div class="cv-chip"></div>
-            <div class="cv-number" id="cardnum-${c.id}" data-full="${_formatCardNumber(c.number)}">${_maskNumber(c.number)}</div>
-          </div>
-          <div class="cv-bottom">
-            <div><small>Holder</small><b>${escapeHtml(c.holder || "—")}</b></div>
-            <div><small>Expires</small><b>${escapeHtml(c.expiry || "—")}</b></div>
-          </div>
-        </div>
-        <div class="card-actions">
-          <button class="vault-btn" onclick='copyCardNum(${JSON.stringify(c.number)})'>${ic("copy")} Copy</button>
-          <button class="vault-btn" onclick='startEditCard(${c.id})'>${ic("pen")} Edit</button>
-          <button class="vault-btn delete" onclick="deleteCard(${c.id}, this)" title="Delete">${ic("trash")}</button>
-        </div>
-      </div>`;
-    }).join("");
-  } catch (err) { console.error("Load cards error:", err); if (!err || err.kind !== "infra") toast("Could not load cards: " + err.message, "error"); _loadErrorBox(document.getElementById("cardsList"), "cards", loadCards, err); }
-}
-
-function revealCard(id) {
-  const el = document.getElementById("cardnum-" + id);
-  if (!el) return;
-  if (el.dataset.revealed === "1") {
-    el.dataset.revealed = "0";
-    el.textContent = _maskNumber(el.dataset.full);
-  } else {
-    el.dataset.revealed = "1";
-    el.textContent = el.dataset.full;
-  }
-}
-
-async function copyCardNum(num) {
-  try { await navigator.clipboard.writeText((num || "").replace(/\D/g, "")); toast("Card number copied!", "success"); }
-  catch (e) { toast("Copy failed", "error"); }
-}
-
-async function startEditCard(id) {
-  try {
-    const data = await api("/cards", "GET", null, true);
-    const c = (data.cards || []).find(x => x.id === id);
-    if (!c) return;
-    editingCardId = id;
-    document.getElementById("cardLabel").value = c.label || "";
-    document.getElementById("cardHolder").value = c.holder || "";
-    document.getElementById("cardBrand").value = c.brand || "";
-    document.getElementById("cardNumber").value = _formatCardNumber(c.number || "");
-    document.getElementById("cardExpiry").value = c.expiry || "";
-    document.getElementById("cardCvv").value = c.cvv || "";
-    document.getElementById("cardNote").value = c.note || "";
-    selectedCardColor = c.color || "#6366f1";
-    document.querySelectorAll("#cardForm .color-btn").forEach(b => b.classList.toggle("active", b.dataset.cardColor === selectedCardColor));
-    _setAddForm("card", true);
-    _scrollToEl(document.getElementById("cardForm"));
-  } catch (err) { toast(err.message, "error"); }
-}
-
-async function deleteCard(id, btn) {
-  if (!confirm("Delete this card?")) return;
-  try { await api("/cards", "DELETE", { id }, true); toast("Card deleted!", "success"); logEvent("warning", "Card deleted", ""); await _rowOut(btn); await loadCards(); await loadStats(); }
-  catch (err) { toast(err.message, "error"); }
-}
-
-/* Lighten/darken a hex colour by amt for the card gradient. */
-function _shift(hex, amt) {
-  const h = (hex || "#6366f1").replace("#", "");
-  if (h.length !== 6) return "#a855f7";
-  let r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
-  r = Math.max(0, Math.min(255, r + amt));
-  g = Math.max(0, Math.min(255, g + amt));
-  b = Math.max(0, Math.min(255, b + amt));
-  return "#" + [r, g, b].map(x => x.toString(16).padStart(2, "0")).join("");
-}
-
-/* ==================== TASKS ==================== */
-async function loadTasks() {
-  const list = document.getElementById("tasksList");
-  if (!list) return;
-  if (!list.children.length) list.innerHTML = _skel(3);
-  try {
-    const data = await api("/tasks", "GET", null, true);
-    if (!data.tasks || !data.tasks.length) {
-      list.innerHTML = `<div class="empty-state"><div class="empty-icon">${ep("✅","gold")}</div><p>No tasks yet</p><small>Add your first task above</small></div>`;
-      return;
-    }
-    list.innerHTML = data.tasks.map(t => `
-      <div class="task-item ${t.completed ? "completed" : ""}">
-        <button class="task-check ${t.completed ? "done" : ""}" onclick="toggleTask(${t.id}, ${t.completed ? 0 : 1})">${t.completed ? "✓" : ""}</button>
-        <span class="task-title">${escapeHtml(t.title)}</span>
-        ${t.priority ? '<span class="task-priority">High</span>' : ""}
-        <button class="task-del" onclick="deleteTask(${t.id}, this)">✕</button>
-      </div>
-    `).join("");
-  } catch (err) { console.error("Load tasks error:", err); if (!err || err.kind !== "infra") toast("Could not load tasks: " + err.message, "error"); _loadErrorBox(document.getElementById("tasksList"), "tasks", loadTasks, err); }
-}
-
-async function addTask() {
-  const title = document.getElementById("taskTitle").value.trim();
-  if (!title) { toast("Enter a task title", "error"); return; }
-  const priority = parseInt(document.getElementById("taskPriority").value || "0", 10);
-  try {
-    await api("/tasks", "POST", { title, priority }, true);
-    document.getElementById("taskTitle").value = "";
-    await loadTasks();
-    await loadStats();
-  } catch (err) { toast(err.message, "error"); }
-}
-
-async function toggleTask(id, completed) {
-  try { await api("/tasks", "PUT", { id, completed: !!completed }, true); await loadTasks(); await loadStats(); }
-  catch (err) { toast(err.message, "error"); }
-}
-
-async function deleteTask(id, btn) {
-  try { await api("/tasks", "DELETE", { id }, true); await _rowOut(btn); await loadTasks(); await loadStats(); }
-  catch (err) { toast(err.message, "error"); }
-}
-
-/* ==================== IDENTITIES ==================== */
-let editingIdentityId = null;
-function showIdentityForm() { _setAddForm("identity", true); }
-function hideIdentityForm() { _setAddForm("identity", false); }
-
-function _parseIdentityFields(text) {
-  const obj = {};
-  (text || "").split("\n").forEach(line => {
-    const idx = line.indexOf(":");
-    if (idx > 0) obj[line.slice(0, idx).trim()] = line.slice(idx + 1).trim();
-    else if (line.trim()) obj["Line " + (Object.keys(obj).length + 1)] = line.trim();
-  });
-  return obj;
-}
-function _fmtIdentityFields(fields) {
-  try { const o = typeof fields === "string" ? JSON.parse(fields) : fields; return Object.entries(o || {}).map(([k, v]) => escapeHtml(k) + ": <b>" + escapeHtml(v) + "</b>").join("<br>"); }
-  catch (e) { return escapeHtml(String(fields || "")); }
-}
-
-async function saveIdentity() {
-  const type = document.getElementById("identityType").value;
-  const label = document.getElementById("identityLabel").value.trim();
-  const fields = _parseIdentityFields(document.getElementById("identityFields").value);
-  if (!label) { toast("Label is required!", "error"); return; }
-  try {
-    if (editingIdentityId) { await api("/identities", "PUT", { id: editingIdentityId, type, label, fields }, true); toast("Identity updated!", "success"); }
-    else { await api("/identities", "POST", { type, label, fields }, true); toast("Identity saved!", "success"); }
-    hideIdentityForm(); await loadIdentities();
-  } catch (err) { toast(err.message, "error"); }
-}
-async function loadIdentities() {
-  const list = document.getElementById("identitiesList");
-  if (list) list.innerHTML = _skel(3);
-  try {
-    const data = await api("/identities", "GET", null, true);
-    if (!data.identities || !data.identities.length) { list.innerHTML = `<div class="empty-state"><div class="empty-icon">${ep("🪪")}</div><p>No identities saved</p><small>Add a passport, licence or ID</small></div>`; return; }
-    const icons = { passport: "🛂", national_id: "🪪", license: "🚗", address: "🏠", tax: "🧾", other: "📄" };
-    list.innerHTML = data.identities.map(it => `
-      <div class="vault-item">
-        <div class="vault-info"><div class="vault-icon">${ep(icons[it.type] || "📄","secure")}</div>
-          <div class="vault-details"><h4>${escapeHtml(it.label)}</h4><p>${_fmtIdentityFields(it.fields)}</p></div></div>
-        <div class="vault-actions">
-          <button class="vault-btn delete" onclick="deleteIdentity(${it.id}, this)" title="Delete">${ic("trash")}</button>
-        </div>
-      </div>`).join("");
-  } catch (err) { if (!err || err.kind !== "infra") toast("Could not load identities: " + err.message, "error"); _loadErrorBox(document.getElementById("identitiesList"), "identities", loadIdentities, err); }
-}
-async function deleteIdentity(id, btn) {
-  if (!confirm("Delete this identity?")) return;
-  try { await api("/identities", "DELETE", { id }, true); toast("Identity deleted!", "success"); await _rowOut(btn); await loadIdentities(); }
-  catch (err) { toast(err.message, "error"); }
-}
-
-/* ==================== CONTACTS ==================== */
-function showContactForm() { _setAddForm("contact", true); }
-function hideContactForm() { _setAddForm("contact", false); }
-async function saveContact() {
-  const name = document.getElementById("contactName").value.trim();
-  if (!name) { toast("Name is required!", "error"); return; }
-  const payload = {
-    name, company: document.getElementById("contactCompany").value.trim(),
-    email: document.getElementById("contactEmail").value.trim(), phone: document.getElementById("contactPhone").value.trim(),
-    address: document.getElementById("contactAddress").value.trim(), note: document.getElementById("contactNote").value.trim(),
-  };
-  try { await api("/contacts", "POST", payload, true); toast("Contact saved!", "success"); hideContactForm(); await loadContacts(); }
-  catch (err) { toast(err.message, "error"); }
-}
-async function loadContacts() {
-  const list = document.getElementById("contactsList");
-  if (list) list.innerHTML = _skel(3);
-  try {
-    const data = await api("/contacts", "GET", null, true);
-    if (!data.contacts || !data.contacts.length) { list.innerHTML = `<div class="empty-state"><div class="empty-icon">${ep("👥")}</div><p>No contacts yet</p><small>Add people you want to keep close</small></div>`; return; }
-    list.innerHTML = data.contacts.map(c => `
-      <div class="vault-item">
-        <div class="vault-info"><div class="vault-icon">${ep((c.name||"?").charAt(0).toUpperCase(),"fire")}</div>
-          <div class="vault-details"><h4>${escapeHtml(c.name)}</h4>
-            <p>${c.email ? escapeHtml(c.email) + " " : ""}${c.phone ? escapeHtml(c.phone) : ""}${c.company ? " · " + escapeHtml(c.company) : ""}</p></div></div>
-        <div class="vault-actions">
-          ${c.phone ? `<button class="vault-btn" onclick='copyText(${JSON.stringify(c.phone)})' title="Copy">${ic("copy")}</button>` : ""}
-          <button class="vault-btn delete" onclick="deleteContact(${c.id}, this)" title="Delete">${ic("trash")}</button>
-        </div>
-      </div>`).join("");
-  } catch (err) { if (!err || err.kind !== "infra") toast("Could not load contacts: " + err.message, "error"); _loadErrorBox(document.getElementById("contactsList"), "contacts", loadContacts, err); }
-}
-async function deleteContact(id, btn) {
-  if (!confirm("Delete this contact?")) return;
-  try { await api("/contacts", "DELETE", { id }, true); toast("Contact deleted!", "success"); await _rowOut(btn); await loadContacts(); }
-  catch (err) { toast(err.message, "error"); }
-}
-
-/* ==================== WIFI ==================== */
-function showWifiForm() { _setAddForm("wifi", true); }
-function hideWifiForm() { _setAddForm("wifi", false); }
-function _wifiString(w) { return "WIFI:T:" + (w.security || "WPA") + ";S:" + (w.ssid || "") + ";P:" + (w.password || "") + ";;"; }
-async function saveWifi() {
-  const label = document.getElementById("wifiLabel").value.trim();
-  const ssid = document.getElementById("wifiSsid").value.trim();
-  if (!label || !ssid) { toast("Label and SSID are required!", "error"); return; }
-  const payload = { label, ssid, password: document.getElementById("wifiPassword").value, security: document.getElementById("wifiSecurity").value, location: document.getElementById("wifiLocation").value.trim() };
-  try { await api("/wifi", "POST", payload, true); toast("WiFi saved!", "success"); hideWifiForm(); await loadWifi(); }
-  catch (err) { toast(err.message, "error"); }
-}
-let _wifiCache = [];
-const _WIFI_BADGE = { WPA: "wpa", WPA2: "wpa2", WEP: "wep", OPEN: "open", nopass: "open" };
-
-function _wifiBadge(security) {
-  const raw = (security || "WPA").toUpperCase();
-  const label = raw.includes("WPA2") ? "WPA2" : raw.includes("WPA") ? "WPA" : raw.includes("WEP") ? "WEP" : "Open";
-  const cls = _WIFI_BADGE[label] || "open";
-  return `<span class="wifi-badge ${cls}">${label}</span>`;
-}
-
-function filterWifiList(q) {
-  q = (q || "").trim().toLowerCase();
-  const rows = q
-    ? _wifiCache.filter(w => [w.label, w.ssid, w.location].some(v => (v || "").toLowerCase().includes(q)))
-    : _wifiCache;
-  _renderWifi(rows, q);
-}
-
-function copyWifiPw(id) {
-  const w = _wifiCache.find(x => x.id === id);
-  if (w && w.password) copyText(w.password);
-}
-
-function toggleWifiPw(id) {
-  const el = document.getElementById("wifipw-" + id);
-  if (!el) return;
-  const w = _wifiCache.find(x => x.id === id);
-  if (!w) return;
-  const revealed = el.dataset.revealed === "1";
-  el.textContent = revealed ? "••••••••" : (w.password || "Open network");
-  el.dataset.revealed = revealed ? "0" : "1";
-  const btn = el.parentElement && el.parentElement.querySelector(".wifi-eye");
-  if (btn) btn.innerHTML = ic(revealed ? "eye" : "eye-off");
-}
-
-async function loadWifi() {
-  const list = document.getElementById("wifiList");
-  if (list) list.innerHTML = _skel(3);
-  try {
-    const data = await api("/wifi", "GET", null, true);
-    _wifiCache = data.wifi || [];
-    if (!_wifiCache.length) { list.innerHTML = `<div class="empty-state"><div class="empty-icon">${ep("📶","teal")}</div><p>No WiFi networks saved</p><small>Add a network and share it with a guest QR</small></div>`; return; }
-    const si = document.getElementById("wifiFilter");
-    if (si && si.value.trim()) { filterWifiList(si.value); return; }
-    _renderWifi(_wifiCache, "");
-  } catch (err) { if (!err || err.kind !== "infra") toast("Could not load WiFi: " + err.message, "error"); _loadErrorBox(document.getElementById("wifiList"), "wifi", loadWifi, err); }
-}
-
-function _renderWifi(rows, query) {
-  const list = document.getElementById("wifiList");
-  if (!list) return;
-  if (!rows.length) {
-    list.innerHTML = `<div class="empty-state"><p>Nothing matches “${escapeHtml(query || "")}”</p><small>Try the network name, SSID or location tag</small></div>`;
-    return;
-  }
-  list.innerHTML = rows.map(w => {
-    const hasPw = !!w.password;
-    return `
-    <div class="vault-item">
-      <div class="vault-info"><div class="vault-icon">${ep("📶","teal")}</div>
-        <div class="vault-details"><h4>${escapeHtml(w.label)} <span class="wifi-ssid">${escapeHtml(w.ssid)}</span> ${_wifiBadge(w.security)}</h4>
-          <p><span class="wifi-pw-wrap"><code class="wifi-pw" id="wifipw-${w.id}" data-revealed="0">${hasPw ? "••••••••" : "Open network"}</code>${hasPw ? `<button class="vault-btn mini wifi-eye" onclick="toggleWifiPw(${w.id})" title="Show / hide password">${ic("eye")}</button>` : ""}</span>
-          ${w.location ? `<span class="wifi-loc">${ic("pin")} ${escapeHtml(w.location)}</span>` : ""}</p></div></div>
-      <div class="vault-actions">
-        <button class="vault-btn" onclick='showWifiQr(${JSON.stringify(_wifiString(w))}, ${JSON.stringify(w.ssid)})' title="Show join QR">${ic("qr")} QR</button>
-        <button class="vault-btn" onclick="shareWifiGuest(${w.id})" title="Share with a guest (1-hour QR link)">${ic("share")} Share</button>
-        ${hasPw ? `<button class="vault-btn" onclick="copyWifiPw(${w.id})" title="Copy password">${ic("copy")}</button>` : ""}
-        <button class="vault-btn delete" onclick="deleteWifi(${w.id}, this)" title="Delete">${ic("trash")}</button>
-      </div>
-    </div>`;
-  }).join("");
-}
-
-async function shareWifiGuest(id) {
-  try {
-    const data = await api(`/wifi/${id}/share`, "POST", null, true);
-    if (!data || !data.url) { toast("Could not create share link", "error"); return; }
-    const html = `<div class="qr-overlay" id="qrOverlay" onclick="document.getElementById('qrOverlay').remove()">
-      <div class="qr-box" onclick="event.stopPropagation()">
-        <button class="qr-close" onclick="document.getElementById('qrOverlay').remove()">✕</button>
-        <h4>${ic("share")} Guest WiFi link</h4>
-        <p>Guests see <b>only the join QR</b> — no login. The link dies after <b>1 hour</b> or the <b>first view</b>.</p>
-        <div class="share-row"><code class="share-url">${escapeHtml(data.url)}</code></div>
-        <div class="share-btns">
-          <button class="vault-btn" onclick='copyText(${JSON.stringify(data.url)})'>${ic("copy")} Copy link</button>
-          <button class="vault-btn" onclick='window.open(${JSON.stringify(data.url)}, "_blank", "noopener")'>${ic("external")} Preview</button>
-        </div>
-      </div></div>`;
-    const old = document.getElementById("qrOverlay"); if (old) old.remove();
-    document.body.insertAdjacentHTML("beforeend", html);
-  } catch (err) { toast(err.message, "error"); }
-}
-async function deleteWifi(id, btn) {
-  if (!confirm("Delete this WiFi network?")) return;
-  try { await api("/wifi", "DELETE", { id }, true); toast("WiFi deleted!", "success"); await _rowOut(btn); await loadWifi(); }
-  catch (err) { toast(err.message, "error"); }
-}
-async function showWifiQr(text, name) {
-  try {
-    const data = await api("/qr?q=" + encodeURIComponent(text), "GET", null, true);
-    const html = `<div class="qr-overlay" id="qrOverlay" onclick="document.getElementById('qrOverlay').remove()">
-      <div class="qr-box" onclick="event.stopPropagation()">
-        <button class="qr-close" onclick="document.getElementById('qrOverlay').remove()">✕</button>
-        <img src="${data.qr}" alt="QR for ${escapeHtml(name)}">
-        <h4>${escapeHtml(name)}</h4>
-        <p>Scan to join this WiFi network</p>
-      </div></div>`;
-    document.body.insertAdjacentHTML("beforeend", html);
-  } catch (err) { toast(err.message, "error"); }
-}
-
-/* ==================== SERVERS ==================== */
-function showServerForm() { _setAddForm("server", true); }
-function hideServerForm() { _setAddForm("server", false); }
-async function saveServer() {
-  const name = document.getElementById("serverName").value.trim();
-  const host = document.getElementById("serverHost").value.trim();
-  if (!name || !host) { toast("Name and host are required!", "error"); return; }
-  const payload = { name, host, port: parseInt(document.getElementById("serverPort").value || "22", 10), username: document.getElementById("serverUsername").value.trim(), password: document.getElementById("serverPassword").value, note: document.getElementById("serverNote").value };
-  try { await api("/servers", "POST", payload, true); toast("Server saved!", "success"); hideServerForm(); await loadServers(); }
-  catch (err) { toast(err.message, "error"); }
-}
-async function loadServers() {
-  const list = document.getElementById("serversList");
-  if (list) list.innerHTML = _skel(3);
-  try {
-    const data = await api("/servers", "GET", null, true);
-    if (!data.servers || !data.servers.length) { list.innerHTML = `<div class="empty-state"><div class="empty-icon">${ep("🖥️")}</div><p>No servers saved</p><small>Store SSH / host credentials</small></div>`; return; }
-    list.innerHTML = data.servers.map(s => `
-      <div class="vault-item">
-        <div class="vault-info"><div class="vault-icon">${ep("🖥️")}</div>
-          <div class="vault-details"><h4>${escapeHtml(s.name)}</h4>
-            <p>${escapeHtml(s.username || "user")}@${escapeHtml(s.host)}:${s.port || 22}</p></div></div>
-        <div class="vault-actions">
-          <button class="vault-btn" onclick='copyText(${JSON.stringify("ssh " + (s.username||"") + "@" + s.host + " -p " + (s.port||22))})'>📋</button>
-          ${s.password ? `<button class="vault-btn" onclick='copyText(${JSON.stringify(s.password)})' title="Copy password">${ic("key")}</button>` : ""}
-          <button class="vault-btn delete" onclick="deleteServer(${s.id}, this)" title="Delete">${ic("trash")}</button>
-        </div>
-      </div>`).join("");
-  } catch (err) { if (!err || err.kind !== "infra") toast("Could not load servers: " + err.message, "error"); _loadErrorBox(document.getElementById("serversList"), "servers", loadServers, err); }
-}
-async function deleteServer(id, btn) {
-  if (!confirm("Delete this server?")) return;
-  try { await api("/servers", "DELETE", { id }, true); toast("Server deleted!", "success"); await _rowOut(btn); await loadServers(); }
-  catch (err) { toast(err.message, "error"); }
-}
-
-/* ==================== RECOVERY PHRASES ==================== */
-function showRecoveryForm() { _setAddForm("recovery", true); }
-function hideRecoveryForm() { _setAddForm("recovery", false); }
-async function saveRecovery() {
-  const label = document.getElementById("recoveryLabel").value.trim();
-  const words = document.getElementById("recoveryWords").value.trim();
-  if (!label || !words) { toast("Label and words are required!", "error"); return; }
-  const wc = words.split(/\s+/).length;
-  try { await api("/recovery", "POST", { label, words, word_count: wc }, true); toast("Recovery phrase saved!", "success"); hideRecoveryForm(); await loadRecovery(); }
-  catch (err) { toast(err.message, "error"); }
-}
-async function loadRecovery() {
-  const list = document.getElementById("recoveryList");
-  if (list) list.innerHTML = _skel(3);
-  try {
-    const data = await api("/recovery", "GET", null, true);
-    if (!data.recovery || !data.recovery.length) { list.innerHTML = `<div class="empty-state"><div class="empty-icon">${ep("🌱","teal")}</div><p>No recovery phrases saved</p><small>Store crypto seed phrases securely</small></div>`; return; }
-    list.innerHTML = data.recovery.map(r => `
-      <div class="vault-item">
-        <div class="vault-info"><div class="vault-icon">${ep("🌱","teal")}</div>
-          <div class="vault-details"><h4>${escapeHtml(r.label)}</h4>
-            <p class="recovery-hidden mono" id="rec-${r.id}">•••• •••• •••• (${r.word_count} words)</p></div></div>
-        <div class="vault-actions">
-          <button class="vault-btn" onclick='revealRecovery(${r.id}, ${JSON.stringify(r.words)})'>${ic("eye")}</button>
-          <button class="vault-btn" onclick='copyText(${JSON.stringify(r.words)})' title="Copy">${ic("copy")}</button>
-          <button class="vault-btn delete" onclick="deleteRecovery(${r.id}, this)" title="Delete">${ic("trash")}</button>
-        </div>
-      </div>`).join("");
-  } catch (err) { if (!err || err.kind !== "infra") toast("Could not load recovery phrases: " + err.message, "error"); _loadErrorBox(document.getElementById("recoveryList"), "recovery phrases", loadRecovery, err); }
-}
-function revealRecovery(id, words) {
-  const el = document.getElementById("rec-" + id);
-  if (!el) return;
-  if (el.dataset.shown === "1") { el.dataset.shown = "0"; el.textContent = "•••• •••• ••••"; el.classList.add("recovery-hidden"); return; }
-  el.dataset.shown = "1"; el.textContent = words; el.classList.remove("recovery-hidden");
-}
-async function deleteRecovery(id, btn) {
-  if (!confirm("Permanently delete this recovery phrase?")) return;
-  try { await api("/recovery", "DELETE", { id }, true); toast("Recovery phrase deleted!", "success"); await _rowOut(btn); await loadRecovery(); }
-  catch (err) { toast(err.message, "error"); }
-}
-
-/* ==================== CODE SNIPPETS (IDE workspace) ==================== */
-let editingSnippetId = null;
-let _livePreviewTimer = null;
 const _RUNNABLE_LANGS = {"html":1, "css":1, "javascript":1, "js":1, "markdown":1, "md":1};
 
 /* Show exactly ONE primary action per language type:
@@ -1866,7 +1085,7 @@ async function loadSnippets() {
     const snips = data.snippets || [];
     const count = document.getElementById("snippetCount");
     if (count) count.textContent = snips.length + " saved";
-    if (!snips.length) { list.innerHTML = `<div class="empty-state"><div class="empty-icon">${ep("</>","gold")}</div><p>No snippets saved yet</p><small>Write code above and press Save</small></div>`; return; }
+    if (!snips.length) { list.innerHTML = `<div class="empty-state"><div class="empty-icon">${ic("code","gold")}</div><p>No snippets saved yet</p><small>Write code above and press Save</small></div>`; return; }
     const origin = window.location.origin + window.location.pathname.replace(/index\.html$/, "").replace(/\/$/, "");
     list.innerHTML = snips.map(s => {
       const shared = s.share_token && s.is_public;
@@ -1876,14 +1095,14 @@ async function loadSnippets() {
         '<div class="snippet-top">' +
           '<div class="snippet-head"><span class="snippet-lang">' + escapeHtml(s.language || "text") + '</span><h4>' + escapeHtml(s.title) + '</h4></div>' +
           '<div class="snippet-actions">' +
-            '<button class="vault-btn" onclick="loadSnippetIntoEditor(' + s.id + ')">' + ic("folder-open") + ' Open</button>' +
-            '<button class="vault-btn" onclick="copySnippetCode(' + s.id + ')">' + ic("copy") + ' Copy</button>' +
-            '<button class="vault-btn" onclick="toggleSnippetShare(' + s.id + ', ' + (shared ? 1 : 0) + ', this)">' + (shared ? ic("globe") + " Unpublish" : ic("rocket") + " Publish") + '</button>' +
-            '<button class="vault-btn delete" onclick="deleteSnippet(' + s.id + ', this)" title="Delete">' + ic("trash") + '</button>' +
+            '<button class="xbtn" onclick="loadSnippetIntoEditor(' + s.id + ')">' + ic("folder-open") + ' Open</button>' +
+            '<button class="xbtn" onclick="copySnippetCode(' + s.id + ')">' + ic("copy") + ' Copy</button>' +
+            '<button class="xbtn" onclick="toggleSnippetShare(' + s.id + ', ' + (shared ? 1 : 0) + ', this)">' + (shared ? ic("globe") + " Unpublish" : ic("rocket") + " Publish") + '</button>' +
+            '<button class="xbtn delete" onclick="deleteSnippet(' + s.id + ', this)" title="Delete">' + ic("trash") + '</button>' +
           '</div>' +
         '</div>' +
         '<pre class="snippet-code"><code>' + escapeHtml(preview) + ((s.content || "").length > 120 ? "\n…" : "") + '</code></pre>' +
-        (shared ? '<div class="snippet-share-url"><span>Published at:</span><code>' + escapeHtml(url) + '</code><a class="vault-btn" href="' + escapeHtml(url) + '" target="_blank" rel="noopener">Open page ↗</a></div>' : '<div class="snippet-share-url muted"><span>Not published — click Publish to deploy a standalone static page.</span></div>') +
+        (shared ? '<div class="snippet-share-url"><span>Published at:</span><code>' + escapeHtml(url) + '</code><a class="xbtn" href="' + escapeHtml(url) + '" target="_blank" rel="noopener">Open page ↗</a></div>' : '<div class="snippet-share-url muted"><span>Not published — click Publish to deploy a standalone static page.</span></div>') +
       '</div>';
     }).join("");
   } catch (err) { if (!err || err.kind !== "infra") toast("Could not load snippets: " + err.message, "error"); _loadErrorBox(document.getElementById("snippetsList"), "snippets", loadSnippets, err); }
@@ -1943,9 +1162,9 @@ function showPubBar(url) {
     '<span class="pub-ic">' + ic("link") + '</span>' +
     '<a class="pub-link" href="' + escapeHtml(url) + '" target="_blank" rel="noopener">' + escapeHtml(url) + '</a>' +
     '<span class="pub-acts">' +
-      '<button class="vault-btn" id="pubOpen">Open ↗</button>' +
-      '<button class="vault-btn" id="pubCopy">Copy</button>' +
-      '<button class="vault-btn" id="pubClose">✕</button>' +
+      '<button class="xbtn" id="pubOpen">Open ↗</button>' +
+      '<button class="xbtn" id="pubCopy">Copy</button>' +
+      '<button class="xbtn" id="pubClose">✕</button>' +
     '</span>';
   bar.querySelector("#pubOpen").addEventListener("click", () => window.open(url, "_blank", "noopener"));
   bar.querySelector("#pubCopy").addEventListener("click", async () => {
@@ -2152,9 +1371,7 @@ async function copyText(t) {
 
 /* ==================== COMMAND PALETTE / SEARCH ==================== */
 const _KIND_META = {
-  vault: ["lock", "vault"], card: ["card", "cards"], note: ["note", "notes"], bookmark: ["bookmark", "bookmarks"],
-  task: ["tasks", "tasks"], contact: ["users", "contacts"], identity: ["id-card", "identities"],
-  wifi: ["wifi", "wifi"], server: ["server", "servers"], recovery: ["leaf", "recovery"], snippet: ["code", "code"],
+  snippet: ["code", "code"], runspace: ["rocket", "jobs"],
 };
 let _cmdTimer = null, _cmdResults = [], _cmdIndex = -1;
 
@@ -2182,7 +1399,7 @@ function renderCommandResults() {
   box.innerHTML = _cmdResults.map((r, i) => {
     const meta = _KIND_META[r.kind] || ["file", "overview"];
     return `<div class="cmd-item ${i === _cmdIndex ? "sel" : ""}" data-i="${i}" onclick="openSearchResult(${i})">
-      <span class="cmd-ic">${ep(meta[0], "premium")}</span>
+      <span class="cmd-ic">${ic(meta[0], "premium")}</span>
       <div class="cmd-text"><div class="cmd-title">${escapeHtml(r.title)}</div>${r.sub ? `<div class="cmd-sub">${escapeHtml(r.sub)}</div>` : ""}</div>
       <span class="cmd-kind">${r.kind}</span>
     </div>`;
@@ -2245,129 +1462,6 @@ document.addEventListener("keydown", e => {
   if (open) closeModal(open);
 });
 
-/* ==================== DATA EXPORT / BACKUP ==================== */
-function openExportModal() {
-  document.getElementById("expPwRow").classList.add("hidden");
-  const pw = document.getElementById("expPw"); if (pw) pw.value = "";
-  openModal("exportModal");
-}
-async function _fetchExport() { return api("/export-data", "GET", null, true); }
-function _backupName(ext) {
-  const d = new Date(), p = n => String(n).padStart(2, "0");
-  return `ahadco-backup-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}.${ext}`;
-}
-function _downloadBlob(blob, filename) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = filename; a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 4000);
-}
-
-/* Human-readable backup: a complete standalone HTML document, organised by
-   section with clean tables — opens/prints nicely in any browser. */
-function buildBackupHTML(data) {
-  const esc = t => escapeHtml(t == null ? "" : String(t));
-  const dt = t => { try { return t ? new Date(t).toLocaleString() : ""; } catch (e) { return t || ""; } };
-  const u = data.user || {};
-  const sec = (title, rows, cols) => {
-    const items = rows || [];
-    if (!items.length) return `<section><h2>${esc(title)} <span class="cnt">0</span></h2><p class="empty">Nothing saved here.</p></section>`;
-    const head = cols.map(c => `<th>${esc(c[0])}</th>`).join("");
-    const body = items.map(r => `<tr>${cols.map(c => `<td>${esc(c[1](r))}</td>`).join("")}</tr>`).join("");
-    return `<section><h2>${esc(title)} <span class="cnt">${items.length}</span></h2><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></section>`;
-  };
-  const parts = [
-    sec("Vault Items", data.vault, [["Type", r => r.type], ["Label", r => r.label], ["Value / secret", r => r.value], ["Added", r => dt(r.created_at)]]),
-    sec("Cards", data.cards, [["Nickname", r => r.nickname || r.label], ["Number", r => r.number], ["Holder", r => r.holder], ["Expiry", r => r.expiry], ["CVV", r => r.cvv], ["Added", r => dt(r.created_at)]]),
-    sec("Notes", data.notes, [["Title", r => r.title], ["Content", r => r.content], ["Pinned", r => r.pinned ? "Yes" : ""], ["Updated", r => dt(r.updated_at || r.created_at)]]),
-    sec("Bookmarks", data.bookmarks, [["Title", r => r.title], ["URL", r => r.url], ["Category", r => r.category], ["Notes", r => r.description], ["Added", r => dt(r.created_at)]]),
-    sec("Tasks", data.tasks, [["Task", r => r.title], ["Done", r => r.completed ? "Yes" : "No"], ["Priority", r => ({ 0: "Normal", 1: "Important", 2: "Urgent" }[r.priority] ?? r.priority)], ["Added", r => dt(r.created_at)]]),
-    sec("Identities", data.identities, [["Type", r => r.type], ["Label", r => r.label], ["Details", r => { try { const o = JSON.parse(r.fields || "{}"); return Object.entries(o).map(([k, v]) => `${k}: ${v}`).join(" · "); } catch (e) { return r.fields; } }], ["Added", r => dt(r.created_at)]]),
-    sec("Contacts", data.contacts, [["Name", r => r.name], ["Phone", r => r.phone], ["Email", r => r.email], ["Notes", r => r.note], ["Added", r => dt(r.created_at)]]),
-    sec("WiFi Networks", data.wifi, [["SSID", r => r.ssid], ["Password", r => r.password], ["Security", r => r.security], ["Location", r => r.location], ["Added", r => dt(r.created_at)]]),
-    sec("Servers", data.servers, [["Name", r => r.name], ["Host", r => r.host], ["Port", r => r.port], ["Username", r => r.username], ["Password", r => r.password], ["Notes", r => r.note]]),
-    sec("Recovery Phrases", data.recovery, [["Label", r => r.label], ["Words", r => r.words], ["Word count", r => r.word_count], ["Added", r => dt(r.created_at)]]),
-    sec("Code Snippets", data.snippets, [["Title", r => r.title], ["Language", r => r.language], ["Code", r => r.content], ["Updated", r => dt(r.updated_at || r.created_at)]]),
-  ].join("\n");
-  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Ahad Co backup — ${esc(u.username || "")}</title>
-<style>
-  body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#f6f4ee;color:#1b1710;margin:0;padding:32px 18px;}
-  main{max-width:900px;margin:0 auto;background:#fff;border:1px solid #e3ddcd;border-radius:14px;padding:30px 34px;box-shadow:0 10px 40px rgba(0,0,0,.06);}
-  header{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px;border-bottom:2px solid #1b1710;padding-bottom:16px;margin-bottom:8px;}
-  h1{font-size:22px;margin:0;}
-  .who{color:#6b6350;font-size:13px;margin-top:4px;}
-  .warn{background:#fff4e4;border:1px solid #ecc97f;color:#6a4a07;border-radius:10px;padding:11px 14px;font-size:13px;margin:16px 0 4px;}
-  section{margin-top:26px;}
-  h2{font-size:16px;margin:0 0 10px;display:flex;align-items:center;gap:8px;}
-  .cnt{background:#eee8d8;border-radius:99px;font-size:11px;padding:2px 9px;color:#6b6350;font-weight:600;}
-  table{width:100%;border-collapse:collapse;font-size:12.5px;}
-  th{text-align:left;color:#6b6350;font-size:11px;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #d9d2bd;padding:6px 8px;}
-  td{border-bottom:1px solid #eee9da;padding:8px;vertical-align:top;word-break:break-word;white-space:pre-wrap;}
-  .empty{color:#8a8168;font-size:13px;font-style:italic;}
-  footer{margin-top:30px;padding-top:12px;border-top:1px solid #e3ddcd;color:#8a8168;font-size:11.5px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;}
-  @media print{body{background:#fff;padding:0;}main{border:none;box-shadow:none;padding:10px;}}
-</style></head><body><main>
-<header><div><h1>Ahad Co — Personal Data Backup</h1><div class="who">Account: <b>${esc(u.username)}</b> (${esc(u.email)}) · Member since ${esc(dt(u.created_at))}</div></div><div class="who">Exported ${esc(dt(data.exported_at))}</div></header>
-<div class="warn"><b>Keep this file private.</b> It contains your unencrypted passwords and secrets. Store it somewhere safe and delete it after use.</div>
-${parts}
-<footer><span>Generated by Ahad Co</span><span>Do not email or upload this file anywhere you wouldn't write your passwords.</span></footer>
-</main></body></html>`;
-}
-
-async function doExportHTML() {
-  try {
-    const data = await _fetchExport();
-    _downloadBlob(new Blob([buildBackupHTML(data)], { type: "text/html;charset=utf-8" }), _backupName("html"));
-    toast("Readable backup downloaded. Keep it safe.", "success");
-    closeModal("exportModal");
-    logEvent("success", "Backup downloaded", "Readable HTML export");
-  } catch (err) { toast(err.message, "error"); }
-}
-async function doExportJSON() {
-  try {
-    const data = await _fetchExport();
-    _downloadBlob(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }), _backupName("json"));
-    toast("Raw JSON downloaded.", "success");
-    closeModal("exportModal");
-    logEvent("success", "Backup downloaded", "Raw JSON export");
-  } catch (err) { toast(err.message, "error"); }
-}
-function doExportEncrypted() {
-  const row = document.getElementById("expPwRow");
-  const nowHidden = row.classList.toggle("hidden");
-  if (!nowHidden) document.getElementById("expPw").focus();
-}
-/* AES-256-GCM encrypted backup, password set at download time.
-   Envelope: {format, v, kdf, iter, salt, iv, data} — decryptable anywhere. */
-async function confirmExportEncrypted() {
-  const pw = document.getElementById("expPw").value;
-  if (pw.length < 8) { toast("Backup password must be at least 8 characters", "error"); return; }
-  try {
-    const data = await _fetchExport();
-    const enc = new TextEncoder();
-    const salt = crypto.getRandomValues(new Uint8Array(16));
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(pw), "PBKDF2", false, ["deriveKey"]);
-    const key = await crypto.subtle.deriveKey(
-      { name: "PBKDF2", hash: "SHA-256", salt, iterations: 150000 },
-      keyMaterial, { name: "AES-GCM", length: 256 }, false, ["encrypt"]);
-    const plain = enc.encode(JSON.stringify(data, null, 2));
-    const cipherBuf = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, plain);
-    const b64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
-    const envelope = {
-      format: "ahad-backup-encrypted", v: 1,
-      kdf: "PBKDF2-SHA256-150000", cipher: "AES-256-GCM",
-      salt: b64(salt), iv: b64(iv), data: b64(cipherBuf),
-      exported_at: data.exported_at,
-    };
-    _downloadBlob(new Blob([JSON.stringify(envelope, null, 2)], { type: "application/json" }), _backupName("ahadbackup"));
-    toast("Encrypted backup downloaded.", "success");
-    closeModal("exportModal");
-    logEvent("success", "Backup downloaded", "Encrypted export (AES-256)");
-  } catch (err) { toast(err.message || "Encryption failed", "error"); }
-}
-
 async function deleteAccount() {
   const c1 = confirm("Are you sure you want to DELETE your account permanently? This CANNOT be undone!");
   if (!c1) return;
@@ -2408,7 +1502,7 @@ function _tfaShowStep1() {
   _tfaBody(`
     <div class="tfa-hero">${ic("shield")}</div>
     <p class="tfa-p">Two-factor authentication asks for a <b>6-digit code</b> from an authenticator app
-    (Google Authenticator, Authy…) every time you sign in — so a stolen password alone can't open your vault.</p>
+    (Google Authenticator, Authy…) every time you sign in — so a stolen password alone can't get into your account.</p>
     <button class="btn-primary block" onclick="_tfaStartSetup()">Get started</button>`);
 }
 
@@ -2423,7 +1517,7 @@ async function _tfaStartSetup() {
       <div class="tfa-qr"><img src="${data.qr_code}" alt="Authenticator QR code"></div>
       <p class="tfa-p"><b>Can't scan?</b> Enter this key in the app by hand:</p>
       <div class="tfa-manual"><code>${data.secret}</code>
-        <button class="vault-btn" onclick="navigator.clipboard.writeText('${data.secret}').then(()=>toast('Secret key copied','success'))">${ic("copy")} Copy</button>
+        <button class="xbtn" onclick="navigator.clipboard.writeText('${data.secret}').then(()=>toast('Secret key copied','success'))">${ic("copy")} Copy</button>
       </div>
       <button class="btn-primary block" onclick="_tfaShowVerify()">Next — verify code</button>`);
   } catch (err) { toast(err.message, "error"); }
@@ -2473,8 +1567,8 @@ function _tfaShowBackupCodes(freshlyEnabled) {
     <p class="tfa-p">Save these <b>${codes.length} backup codes</b> somewhere safe — <b>each works once</b> if you lose access to your authenticator app.</p>
     <div class="bc-grid">${codes.map(c => `<code>${c}</code>`).join("")}</div>
     <div class="bc-actions">
-      <button class="vault-btn" onclick="_tfaDownloadCodes()">${ic("download")} Download codes</button>
-      <button class="vault-btn" onclick="navigator.clipboard.writeText(_tfa.codes.join('\\n')).then(()=>toast('All codes copied','success'))">${ic("copy")} Copy all</button>
+      <button class="xbtn" onclick="_tfaDownloadCodes()">${ic("download")} Download codes</button>
+      <button class="xbtn" onclick="navigator.clipboard.writeText(_tfa.codes.join('\\n')).then(()=>toast('All codes copied','success'))">${ic("copy")} Copy all</button>
     </div>
     <label class="bc-confirm"><input type="checkbox" id="tfaSavedChk"> I've saved these codes somewhere safe</label>
     <button class="btn-primary block" id="tfaDoneBtn" disabled onclick="closeModal('tfaModal');refreshSecurityPanel()">Done</button>`);
@@ -2620,7 +1714,7 @@ async function loadSessionsList() {
           <b>${escapeHtml(d.label)}${r.is_current ? ' <span class="chip on sm">This device</span>' : ""}</b>
           <small>${escapeHtml(r.ip_address || "unknown ip")} · last active ${escapeHtml(seen)}</small>
         </div>
-        ${r.is_current ? "" : `<button class="vault-btn danger" onclick="revokeSession(${r.id})" title="Sign this device out">${ic("log-out")} Revoke</button>`}
+        ${r.is_current ? "" : `<button class="xbtn danger" onclick="revokeSession(${r.id})" title="Sign this device out">${ic("log-out")} Revoke</button>`}
       </div>`;
     }).join("");
   } catch (err) { box.innerHTML = `<div class="muted" style="font-size:13px">Couldn't load sessions.</div>`; }
@@ -2658,11 +1752,10 @@ let _lastProfile = null;
 async function loadStats() {
   try {
     const data = await api("/stats", "GET", null, true);
-    const sv = document.getElementById("statVault"); if (sv) sv.textContent = data.vault_entries || 0;
-    const sc = document.getElementById("statCards"); if (sc) sc.textContent = data.cards || 0;
-    const sn = document.getElementById("statNotes"); if (sn) sn.textContent = data.notes || 0;
-    const st = document.getElementById("statTasks"); if (st) st.textContent = data.open_tasks || 0;
-    const sb = document.getElementById("statBookmarks"); if (sb) sb.textContent = data.bookmarks || 0;
+    const sj = document.getElementById("statJobs"); if (sj) sj.textContent = data.jobs_total || 0;
+    const sl = document.getElementById("statLive"); if (sl) sl.textContent = data.jobs_deployed || 0;
+    const ss = document.getElementById("statSnippets"); if (ss) ss.textContent = data.snippets || 0;
+    const sp = document.getElementById("statPublished"); if (sp) sp.textContent = data.published || 0;
   } catch (err) { console.error("Load stats error:", err); }
 }
 
@@ -2673,18 +1766,15 @@ async function loadStats() {
 // which otherwise can resurrect a stale auth screen with the user's old form
 // data still in it.
 /* ==================== CLIENT-SIDE ROUTING ====================
-   Every section has a REAL URL (/vault, /code, /jobs …) — like a proper SaaS:
+   Every section has a REAL URL (/code, /jobs …) — like a proper SaaS:
      • switchTab pushes the path → browser back/forward walk sections
-     • refresh on /vault boots straight into Vault (no bounce to dashboard)
+     • refresh on /jobs boots straight into RunSpace (no bounce to dashboard)
      • links can be bookmarked/shared; logged-out visits to protected paths
        bounce to /sign-in and RETURN after successful login. */
 const ROUTES = {
-  "/dashboard": "overview", "/vault": "vault", "/cards": "cards",
-  "/identities": "identities", "/contacts": "contacts", "/wifi": "wifi",
-  "/servers": "servers", "/seeds": "recovery", "/recovery": "recovery",
-  "/code": "code", "/runspace": "jobs", "/jobs": "jobs",
-  "/admin": "admin", "/notes": "notes",
-  "/bookmarks": "bookmarks", "/tasks": "tasks", "/profile": "profile",
+  "/dashboard": "overview", "/code": "code",
+  "/runspace": "jobs", "/jobs": "jobs",
+  "/admin": "admin", "/profile": "profile",
 };
 const TAB_PATHS = {};
 Object.keys(ROUTES).forEach(p => { if (!TAB_PATHS[ROUTES[p]]) TAB_PATHS[ROUTES[p]] = p; });
@@ -2777,7 +1867,7 @@ function reconcileScreen() {
     authToken = localStorage.getItem("ahad_token");
     showScreen("screen-dashboard");
     loadDashboard().catch(() => { /* loadDashboard handles its own errors */ });
-    routeFromUrl();   // honor deep links (/vault, /code…) after auth restore
+    routeFromUrl();   // honor deep links (/code, /jobs…) after auth restore
   } else if (localStorage.getItem("ahad_signup_username")) {
     // A verification was in progress — keep them on the OTP screen.
     restoreOtpScreen();
@@ -2843,21 +1933,6 @@ document.addEventListener("DOMContentLoaded", () => {
     showScreen("screen-landing");
   });
 
-  // "Add New" buttons
-  const btnAddVault = document.getElementById("btnAddVault");
-  if (btnAddVault) btnAddVault.addEventListener("click", () => _setAddForm("vault"));
-  const btnAddCard = document.getElementById("btnAddCard");
-  if (btnAddCard) btnAddCard.addEventListener("click", () => _setAddForm("card"));
-  const btnAddIdentity = document.getElementById("btnAddIdentity");
-  if (btnAddIdentity) btnAddIdentity.addEventListener("click", () => _setAddForm("identity"));
-  const btnAddContact = document.getElementById("btnAddContact");
-  if (btnAddContact) btnAddContact.addEventListener("click", () => _setAddForm("contact"));
-  const btnAddWifi = document.getElementById("btnAddWifi");
-  if (btnAddWifi) btnAddWifi.addEventListener("click", () => _setAddForm("wifi"));
-  const btnAddServer = document.getElementById("btnAddServer");
-  if (btnAddServer) btnAddServer.addEventListener("click", () => _setAddForm("server"));
-  const btnAddRecovery = document.getElementById("btnAddRecovery");
-  if (btnAddRecovery) btnAddRecovery.addEventListener("click", () => _setAddForm("recovery"));
   // Code IDE wiring
   const btnSaveSnippet = document.getElementById("btnSaveSnippet");
   if (btnSaveSnippet) btnSaveSnippet.addEventListener("click", saveSnippet);
@@ -2937,11 +2012,6 @@ document.addEventListener("DOMContentLoaded", () => {
   document.addEventListener("keydown", e => {
     if (e.key === "Escape") { const c = document.querySelector(".cs-canvas.full"); if (c) toggleEditorFullscreen(); }
   });
-  const btnAddNote = document.getElementById("btnAddNote");
-  if (btnAddNote) btnAddNote.addEventListener("click", () => _setAddForm("note"));
-  const btnAddBookmark = document.getElementById("btnAddBookmark");
-  if (btnAddBookmark) btnAddBookmark.addEventListener("click", () => _setAddForm("bookmark"));
-
   // Tab click handlers (desktop)
   document.querySelectorAll(".dash-tab").forEach(tab => {
     tab.addEventListener("click", () => switchTab(tab.dataset.tab));
@@ -2951,32 +2021,6 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll(".bn-item").forEach(b => {
     b.addEventListener("click", () => switchTab(b.dataset.tab));
   });
-
-  // Note colour picker (uses data-color)
-  const noteColorBtns = document.querySelectorAll("#noteForm .color-btn");
-  noteColorBtns.forEach(btn => {
-    btn.addEventListener("click", () => {
-      noteColorBtns.forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      selectedNoteColor = btn.dataset.color;
-    });
-  });
-  if (noteColorBtns[0]) { noteColorBtns[0].classList.add("active"); selectedNoteColor = noteColorBtns[0].dataset.color; }
-
-  // Card colour picker (uses data-card-color)
-  const cardColorBtns = document.querySelectorAll("#cardForm .color-btn");
-  cardColorBtns.forEach(btn => {
-    btn.addEventListener("click", () => {
-      cardColorBtns.forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      selectedCardColor = btn.dataset.cardColor;
-    });
-  });
-  if (cardColorBtns[0]) { cardColorBtns[0].classList.add("active"); selectedCardColor = cardColorBtns[0].dataset.cardColor; }
-
-  // Task input: Enter to add
-  const taskInput = document.getElementById("taskTitle");
-  if (taskInput) taskInput.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addTask(); } });
 
   // Password strength
   const pw = document.getElementById("su_password");
@@ -3095,7 +2139,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (authToken) {
     showScreen("screen-dashboard");
     loadDashboard().catch(() => { /* infra-safe: banner + retry inside */ });
-    routeFromUrl();          // direct hit on /vault etc. → open that section
+    routeFromUrl();          // direct hit on /jobs etc. → open that section
   } else if (localStorage.getItem("ahad_signup_username")) {
     // A verification was in progress (e.g. user switched to their mail app and
     // the page reloaded). Restore the OTP screen so they can finish verifying.
@@ -3238,7 +2282,7 @@ function renderJobs(jobs) {
       row.innerHTML = ic("globe") + '<code title="' + escapeHtml(shownUrl) + '">' + escapeHtml(shownUrl) + '</code>';
       const mk2 = (label, title, fn) => {
         const b = document.createElement("button");
-        b.className = "vault-btn"; b.innerHTML = label; b.title = title;
+        b.className = "xbtn"; b.innerHTML = label; b.title = title;
         b.addEventListener("click", fn); row.appendChild(b);
       };
       mk2(ic("copy"), "Copy URL", () => copyText(shownUrl));

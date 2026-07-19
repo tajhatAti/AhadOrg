@@ -116,12 +116,20 @@ check("new codes differ from old", set(new_codes) != set(old_codes))
 r = c.post("/2fa/disable", json={"password": "oldpass-3", "code": new_codes[0]}, headers=auth(tok3))
 check("fresh backup code can authorise disable", r.status_code == 200, r.text)
 
-# ---------- 7) export has EVERY section ----------
+# ---------- 7) the vault is gone — no data can leak from dead features ----------
 r = c.get("/export-data", headers=auth(tok3))
-j = r.json()
-missing = [k for k in ["identities", "contacts", "wifi", "servers", "recovery", "snippets", "notes", "bookmarks", "vault", "cards", "tasks"] if k not in j]
-check("export contains all 11 sections", not missing, "missing: " + ",".join(missing))
-check("export still has raw structure for developers", "user" in j and "exported_at" in j)
+check("export-data route is dead (404 even for authed user)", r.status_code == 404)
+cn = get_db_connection()
+tables = {row[0] for row in cn.execute(
+    "SELECT name FROM sqlite_master WHERE type='table'").fetchall()} \
+    if os.environ.get("DB_PATH") else set()
+cn.close()
+VAULT_TABLES = {"vault_entries", "user_notes", "user_bookmarks", "user_categories",
+                "user_cards", "user_tasks", "user_identities", "user_contacts",
+                "user_wifi", "wifi_shares", "user_servers", "user_recovery",
+                "api_keys", "notifications"}
+check("no vault tables remain in the live schema",
+      not (VAULT_TABLES & tables), "leftovers: " + ",".join(VAULT_TABLES & tables))
 
 # ---------- 8) single-use setup code still intact (security audit) ----------
 uid4, tok4 = make_user("pwuser4", "pw4@t.dev", "oldpass-4")

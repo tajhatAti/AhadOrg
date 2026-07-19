@@ -94,7 +94,7 @@ body {
 }
 
 a, button, input, select, textarea, .quick-card, .stat-card,
-.feat, .sec-card, .job-card, .note-card, .vault-item, .bookmark-item {
+.feat, .sec-card, .job-card {
   transition:
     transform .18s var(--ease),
     box-shadow .18s var(--ease),
@@ -547,19 +547,15 @@ html[data-theme="light"] .dash-bar { background: var(--band) !important; }
 .tab-head .btn-primary.sm { margin-left: auto; }
 .quick h2 { font-family: var(--serif) !important; font-weight: 560 !important; color: var(--ink) !important; }
 
-.stat-card, .quick-card, .add-form, .profile-card, .job-form, .job-card,
-.jobs-empty, .vault-item, .note-card, .bookmark-item, .card-wrap,
-.notes-grid > *, .tasks-list > *, .bookmarks-list > *, .vault-list > *,
-.contact-list > *, .wifi-list > *, .server-list > *, .id-card,
-.session-item, .history-item, .api-key-item, .snippets-list > * {
+.stat-card, .quick-card, .profile-card, .job-form, .job-card,
+.jobs-empty, .session-item, .history-item, .snippets-list > * {
   background: var(--panel) !important; background-image: none !important;
   border: 1px solid var(--line) !important;
   border-radius: var(--r-md) !important;
   box-shadow: var(--shadow-s) !important;
   color: var(--ink) !important;
 }
-.stat-card:hover, .quick-card:hover, .job-card:hover,
-.vault-item:hover, .note-card:hover, .bookmark-item:hover {
+.stat-card:hover, .quick-card:hover, .job-card:hover {
   transform: translateY(-3px) !important;
   border-color: var(--line-2) !important;
   box-shadow: var(--shadow-m) !important;
@@ -569,15 +565,12 @@ html[data-theme="light"] .dash-bar { background: var(--band) !important; }
 .ic { width: 1em; height: 1em; flex: none; display: inline-block; vertical-align: -.14em; }
 .ic svg { width: 100%; height: 100%; display: block; }
 svg.ic { width: 1em; height: 1em; display: inline-block; vertical-align: -.14em; }
-.vault-btn, .job-btn, .quick-card, .cs-act, .btn-primary, .btn-secondary,
+.xbtn, .job-btn, .quick-card, .cs-act, .btn-primary, .btn-secondary,
 .btn-ghost, .more-item, .pub-btn, .ap-close, .cs-close-prev { vertical-align: middle; }
-.vault-btn .ic, .job-btn .ic, .qc-ic .ic, .cs-act .ic { font-size: 14px; }
-.vault-btn, .job-btn { display: inline-flex; align-items: center; gap: 5px; }
+.xbtn .ic, .job-btn .ic, .qc-ic .ic, .cs-act .ic { font-size: 14px; }
+.xbtn, .job-btn { display: inline-flex; align-items: center; gap: 5px; }
 .job-btn .ic { font-size: 13.5px; }
 .empty-icon { font-size: 30px; color: var(--muted); opacity: .55; }
-.vault-icon, .bookmark-icon { font-size: 21px; color: var(--ink-2); }
-.pin-badge .ic { font-size: 13px; }
-.pin-badge { color: var(--acc) !important; }
 .cmd-ic .ic { font-size: 17px; }
 .cmd-lead .ic { font-size: 17px; color: var(--muted); }
 .ap-ic .ic { font-size: 15px; }
@@ -603,7 +596,7 @@ svg.ic { width: 1em; height: 1em; display: inline-block; vertical-align: -.14em;
   background: var(--paper) !important; border: 1px solid var(--line) !important;
   border-radius: 12px !important; box-shadow: none !important;
 }
-.stat-card *, .quick-card *, .job-card *, .note-card *, .profile-card * { color: inherit; }
+.stat-card *, .quick-card *, .job-card *, .profile-card * { color: inherit; }
 .profile-card h3 { font-family: var(--serif) !important; font-weight: 600 !important; }
 .profile-card.danger { border-color: rgba(179, 38, 30, .35) !important; }
 .muted { color: var(--muted) !important; }
@@ -613,14 +606,6 @@ svg.ic { width: 1em; height: 1em; display: inline-block; vertical-align: -.14em;
   background: transparent !important; box-shadow: none !important;
   color: var(--muted) !important;
 }
-
-/* engraved black payment card — stays black in both themes */
-.card-visual {
-  background: var(--band) !important; background-image: none !important;
-  color: var(--cream) !important; border: 1px solid #000 !important;
-  border-radius: var(--r-lg) !important; box-shadow: var(--shadow-m) !important;
-}
-.card-visual * { color: var(--cream) !important; }
 
 /* ================= 11. CODE STUDIO ================================== */
 .cs-header {
@@ -1126,7 +1111,7 @@ body.ed-full { overflow: hidden !important; }
 .ah-dot { width: 22px; height: 3.5px; border-radius: 99px; background: var(--line); transition: background .2s; }
 .ah-dot.on { background: var(--acc); }
 
-/* ---- export modal ---- */
+/* ---- warning callout (shared) ---- */
 .warn-box {
   display: flex; gap: 10px; align-items: flex-start;
   background: rgba(230, 129, 25, .10) !important; border: 1px solid rgba(230, 129, 25, .4) !important;
@@ -1134,25 +1119,6 @@ body.ed-full { overflow: hidden !important; }
   padding: 11px 12px; font-size: 12.5px; line-height: 1.45; margin-bottom: 14px;
 }
 .warn-box .ic { font-size: 17px; color: var(--acc); margin-top: 1px; }
-.exp-opts { display: flex; flex-direction: column; gap: 9px; }
-.exp-opt {
-  display: flex !important; align-items: center !important; gap: 12px !important;
-  text-align: left !important; background: var(--paper) !important;
-  border: 1px solid var(--line) !important; border-radius: var(--r-md) !important;
-  padding: 12px 14px !important; cursor: pointer;
-  transition: border-color .16s var(--ease), transform .16s var(--ease) !important;
-}
-.exp-opt:hover { border-color: var(--acc) !important; transform: translateY(-1px); }
-.exp-ic {
-  width: 38px; height: 38px; flex: none; border-radius: 10px;
-  background: var(--panel); border: 1px solid var(--line);
-  display: inline-flex; align-items: center; justify-content: center;
-}
-.exp-ic .ic { font-size: 18px; color: var(--acc); }
-.exp-opt b { display: block; color: var(--ink); font-size: 14px; }
-.exp-opt small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; line-height: 1.4; }
-.exp-pw { display: flex; gap: 8px; padding: 2px 2px 4px; }
-.exp-pw input { flex: 1; }
 
 /* ---- 2FA wizard ---- */
 .tfa-hero { text-align: center; color: var(--acc); font-size: 40px; margin: 6px 0 12px; }
@@ -1194,7 +1160,7 @@ body.ed-full { overflow: hidden !important; }
   padding: 5px 8px; text-align: center; word-break: break-all;
 }
 .bc-actions { display: flex; gap: 8px; margin-bottom: 12px; }
-.bc-actions .vault-btn { flex: 1; justify-content: center; }
+.bc-actions .xbtn { flex: 1; justify-content: center; }
 .bc-confirm { display: flex; align-items: center; gap: 9px; color: var(--ink-2); font-size: 13px; margin: 2px 0 14px; cursor: pointer; }
 .bc-confirm input { width: 16px; height: 16px; accent-color: var(--acc); }
 #tfaDoneBtn:disabled { opacity: .45 !important; cursor: not-allowed !important; }
@@ -1280,16 +1246,16 @@ body.ed-full { overflow: hidden !important; }
   background: var(--acc-soft) !important; color: var(--acc) !important;
   font-weight: 600 !important;
 }
-.code-studio .snippet-actions .vault-btn {
+.code-studio .snippet-actions .xbtn {
   background: var(--paper) !important; border: 1px solid var(--line-2) !important;
   color: var(--ink-2) !important; border-radius: var(--r-sm) !important;
   padding: 6px 11px !important; font-size: 12px !important; font-weight: 550 !important;
 }
-.code-studio .snippet-actions .vault-btn:hover {
+.code-studio .snippet-actions .xbtn:hover {
   border-color: var(--acc) !important; color: var(--acc) !important;
   background: var(--acc-soft) !important;
 }
-.code-studio .snippet-actions .vault-btn.delete:hover {
+.code-studio .snippet-actions .xbtn.delete:hover {
   border-color: var(--red) !important; color: var(--red) !important; background: transparent !important;
 }
 .code-studio .snippet-code {
@@ -1303,12 +1269,12 @@ body.ed-full { overflow: hidden !important; }
   color: var(--acc) !important; background: var(--acc-soft) !important;
   border: none !important;
 }
-.code-studio .snippet-share-url .vault-btn {
+.code-studio .snippet-share-url .xbtn {
   background: var(--btn) !important; color: var(--btn-fg) !important;
   border: none !important; text-decoration: none !important;
   border-radius: var(--r-sm) !important; padding: 6px 12px !important; font-size: 12px !important;
 }
-.code-studio .snippet-share-url .vault-btn:hover { background: var(--btn-hover) !important; }
+.code-studio .snippet-share-url .xbtn:hover { background: var(--btn-hover) !important; }
 .code-studio .empty-state, .code-studio .loading-state { padding: 26px 10px; }
 .code-studio .empty-state p, .code-studio .empty-state small { color: var(--ink-2) !important; }
 
@@ -1346,7 +1312,7 @@ body.ed-full { overflow: hidden !important; }
   font-family: var(--mono); font-size: 11.5px; color: var(--acc);
   flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.job-url .vault-btn { padding: 4px 9px !important; font-size: 11px !important; }
+.job-url .xbtn { padding: 4px 9px !important; font-size: 11px !important; }
 .job-pill {
   font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; font-weight: 600;
   text-transform: uppercase; border-radius: 99px; padding: 2.5px 8px;
@@ -1356,7 +1322,7 @@ body.ed-full { overflow: hidden !important; }
 .job-pill.priv { color: var(--acc); border-color: rgba(188,67,8,.5); }
 
 /* ============================================================
-§25  WiFi badges / share modal / jobs live-note
+§25  jobs live-note
 ============================================================ */
 .jobs-note {
   font-family: var(--sans); font-size: 12px; color: var(--muted);
@@ -1364,40 +1330,6 @@ body.ed-full { overflow: hidden !important; }
   border-radius: var(--r-sm) !important; padding: 8px 12px; margin: -6px 0 14px !important;
 }
 .jobs-sub code, .jobs-note code { font-family: var(--mono); font-size: 11.5px; color: var(--acc); }
-
-/* filter field above the WiFi list — quiet, full-width */
-.wifi-filter { margin: 4px 0 12px !important; font-size: 13px !important; }
-
-/* network type badge — tiny colored tag on the list row */
-.wifi-badge {
-  display: inline-block; font-family: var(--mono); font-size: 9.5px; font-weight: 600;
-  letter-spacing: .08em; text-transform: uppercase; border-radius: 99px;
-  padding: 2px 8px; border: 1px solid var(--line-2); color: var(--muted);
-  vertical-align: 1px; margin-left: 4px;
-}
-.wifi-badge.wpa  { color: var(--green); border-color: rgba(30,122,60,.45); background: rgba(30,122,60,.07); }
-.wifi-badge.wpa2 { color: var(--green); border-color: rgba(30,122,60,.45); background: rgba(30,122,60,.07); }
-.wifi-badge.wep  { color: var(--acc); border-color: rgba(188,67,8,.5); background: var(--acc-soft); }
-.wifi-badge.open { color: var(--muted); }
-
-.wifi-ssid { color: var(--muted); font-weight: 400; font-size: .92em; }
-.wifi-pw {
-  font-family: var(--mono) !important; font-size: 12px !important;
-  background: var(--panel-2); border: 1px solid var(--line-2);
-  border-radius: 6px; padding: 2px 8px; letter-spacing: .04em;
-}
-.wifi-pw-wrap { display: inline-flex; align-items: center; gap: 6px; margin-right: 8px; }
-.wifi-loc { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 12px; }
-.wifi-loc .ic { font-size: 12px; }
-.vault-btn.mini { padding: 2px 6px !important; font-size: 12px !important; line-height: 1 !important; min-height: 0 !important; }
-
-/* guest-share modal rows */
-.share-row {
-  background: var(--panel-2); border: 1px dashed var(--line-2); border-radius: var(--r-sm);
-  padding: 9px 12px; margin: 10px 0;
-}
-.share-url { font-family: var(--mono); font-size: 11.5px; color: var(--acc); word-break: break-all; }
-.share-btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 
 /* ============================================================
 §26  Server-waking banner (infra failures, replaces toast floods)
@@ -1432,7 +1364,7 @@ body.ed-full { overflow: hidden !important; }
 .load-error-tx { flex: 1 1 auto; min-width: 0; }
 .load-error-tx b { display: block; font-size: 13.5px; margin-bottom: 2px; }
 .load-error-tx span { display: block; font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
-.load-error .vault-btn { flex: 0 0 auto; }
+.load-error .xbtn { flex: 0 0 auto; }
 
 .fatal-overlay {
   position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center;
@@ -1498,7 +1430,6 @@ body.ed-full { overflow: hidden !important; }
      - skeleton shimmer replaces the hourglass-emoji placeholders
      - row-leave: deleted rows slide/fade away before re-render
      - small busy spinners on action buttons (Publish etc.)
-     - wifi password chip: mono dots in a tidy pill, never a ragged row
      All motion is short (≤300ms), eased, and respects reduced-motion.
 ============================================================ */
 .skel-wrap { display: flex; flex-direction: column; gap: 10px; padding: 4px 2px; }
@@ -1517,24 +1448,15 @@ body.ed-full { overflow: hidden !important; }
 .row-leave { animation: rowLeave .22s ease forwards !important; pointer-events: none !important; }
 @keyframes rowLeave { to { opacity: 0; transform: translateX(10px) scale(.985); } }
 
-/* small busy spinner inside action buttons (.vault-btn / .cs-act) when .loading */
-.vault-btn.loading, .cs-act.loading {
+/* small busy spinner inside action buttons (.xbtn / .cs-act) when .loading */
+.xbtn.loading, .cs-act.loading {
   opacity: .78 !important; pointer-events: none !important;
   display: inline-flex !important; align-items: center; gap: 5px;
 }
-.vault-btn.loading::before, .cs-act.loading::before {
+.xbtn.loading::before, .cs-act.loading::before {
   content: ""; width: 11px; height: 11px; flex: 0 0 auto; border-radius: 50%;
   border: 2px solid var(--line); border-top-color: var(--acc);
   animation: spin .7s linear infinite;
-}
-
-/* wifi password: tidy mono chip; dots/pw never stretch the card */
-.wifi-pw-wrap { display: inline-flex !important; align-items: center; gap: 6px; max-width: 100%; vertical-align: middle; }
-.wifi-pw {
-  display: inline-block; max-width: 190px; overflow: hidden;
-  text-overflow: ellipsis; white-space: nowrap; vertical-align: middle;
-  font-family: var(--mono) !important; letter-spacing: 1.5px;
-  background: var(--panel-2); padding: 3px 9px; border-radius: 7px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1544,7 +1466,7 @@ body.ed-full { overflow: hidden !important; }
 /* ============================================================
    §30 — DEVELOPER-FIRST RESTRUCTURE (RunSpace pivot)
    - Code Studio + RunSpace are the primary sidebar entries;
-     vault & daily tools stay fully working but visually quieter
+     code & hosting tools stay fully working but visually quieter
      (.tab-secondary), separated by hairlines (.tab-sep).
    - Overview opens with two big entry cards (.feat-card).
    - Signup carries a Terms-of-Use checkbox (.tos-check).

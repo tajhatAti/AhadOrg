@@ -218,7 +218,7 @@ class _Cursor:
             # Every query in the app passes through HERE — log failures so a
             # leftover SQLite-only construct (or any DB error) is visible in
             # logs immediately instead of hiding behind a 500. Params are
-            # intentionally NOT logged: they can carry vault secrets.
+            # intentionally NOT logged: they can carry code secrets.
             logger.error(
                 "DB query failed [%s]: %s | SQL: %s",
                 DIALECT, type(exc).__name__, " ".join(sql_t.split())[:500],
@@ -459,18 +459,6 @@ _SCHEMA_TABLES = [
     )
     """,
     """
-    CREATE TABLE IF NOT EXISTS vault_entries (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        type TEXT NOT NULL,
-        label TEXT NOT NULL,
-        value TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-    )
-    """,
-    """
     CREATE TABLE IF NOT EXISTS user_2fa (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL UNIQUE,
@@ -509,54 +497,6 @@ _SCHEMA_TABLES = [
     )
     """,
     """
-    CREATE TABLE IF NOT EXISTS user_notes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        title TEXT NOT NULL,
-        content TEXT NOT NULL,
-        color TEXT DEFAULT '#7C6CF6',
-        pinned INTEGER DEFAULT 0,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-    )
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS user_bookmarks (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        title TEXT NOT NULL,
-        url TEXT NOT NULL,
-        description TEXT,
-        category TEXT,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-    )
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS user_categories (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        name TEXT NOT NULL,
-        icon TEXT DEFAULT '📁',
-        color TEXT DEFAULT '#7C6CF6',
-        created_at TEXT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-    )
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS api_keys (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        name TEXT NOT NULL,
-        key_hash TEXT NOT NULL,
-        last_used TEXT,
-        created_at TEXT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-    )
-    """,
-    """
     CREATE TABLE IF NOT EXISTS jobs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
@@ -581,105 +521,6 @@ _SCHEMA_TABLES = [
     )
     """,
     """
-    CREATE TABLE IF NOT EXISTS notifications (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        type TEXT NOT NULL,
-        title TEXT NOT NULL,
-        message TEXT NOT NULL,
-        is_read INTEGER DEFAULT 0,
-        created_at TEXT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-    )
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS user_cards (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        label TEXT NOT NULL,
-        holder TEXT,
-        number TEXT NOT NULL,
-        expiry TEXT,
-        cvv TEXT,
-        brand TEXT,
-        note TEXT,
-        color TEXT DEFAULT '#6366f1',
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-    )
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS user_tasks (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        title TEXT NOT NULL,
-        completed INTEGER NOT NULL DEFAULT 0,
-        priority INTEGER NOT NULL DEFAULT 0,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-    )
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS user_identities (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        type TEXT NOT NULL,
-        label TEXT NOT NULL,
-        fields TEXT,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-    )
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS user_contacts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        name TEXT NOT NULL,
-        email TEXT,
-        phone TEXT,
-        company TEXT,
-        address TEXT,
-        note TEXT,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-    )
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS user_wifi (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        label TEXT NOT NULL,
-        ssid TEXT NOT NULL,
-        password TEXT,
-        security TEXT DEFAULT 'WPA',
-        hidden INTEGER DEFAULT 0,
-        location TEXT,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-    )
-    """,
-    """
-    -- Temporary WiFi share links: a guest opens /w/{token} and sees ONLY the
-    -- join QR (no login needed). Dies after 1 hour OR after the first view.
-    CREATE TABLE IF NOT EXISTS wifi_shares (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        token TEXT UNIQUE NOT NULL,
-        user_id INTEGER NOT NULL,
-        wifi_id INTEGER,
-        ssid TEXT NOT NULL,
-        qr_payload TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        expires_at TEXT NOT NULL,
-        viewed_at TEXT,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-    )
-    """,
-    """
     -- Admin panel: every destructive action lands here (who did what, when).
     CREATE TABLE IF NOT EXISTS admin_audit_log (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -699,34 +540,6 @@ _SCHEMA_TABLES = [
         ip TEXT,
         status TEXT NOT NULL DEFAULT 'open',
         created_at TEXT NOT NULL
-    )
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS user_servers (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        name TEXT NOT NULL,
-        host TEXT NOT NULL,
-        port INTEGER DEFAULT 22,
-        username TEXT,
-        password TEXT,
-        keyfile TEXT,
-        note TEXT,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-    )
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS user_recovery (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        label TEXT NOT NULL,
-        words TEXT NOT NULL,
-        word_count INTEGER DEFAULT 12,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     )
     """,
     """
@@ -770,6 +583,23 @@ def init_db():
 
         for ddl in _SCHEMA_TABLES:
             conn.execute(_translate_ddl(ddl))
+
+
+        # ------------------------------------------------------------------
+        # MIGRATION 001 (developer-first pivot): the vault product is gone.
+        # Drop every table that backed Vault/Cards/IDs/Contacts/WiFi/Servers/
+        # Seeds/Notes/Bookmarks/Tasks (+ never-used api_keys/notifications).
+        # Idempotent — safe on every boot. Kept tables (users, sessions,
+        # user_2fa, jobs, snippets, activity_log, admin_audit_log, abuse_reports,
+        # login_history, user_preferences) only reference users, never these.
+        _DROPPED_VAULT_TABLES = (
+            "wifi_shares", "user_wifi",  # child first (FK parent second)
+            "vault_entries", "user_notes", "user_bookmarks", "user_categories",
+            "user_cards", "user_tasks", "user_identities", "user_contacts",
+            "user_servers", "user_recovery", "api_keys", "notifications",
+        )
+        for _t in _DROPPED_VAULT_TABLES:
+            conn.execute(f"DROP TABLE IF EXISTS {_t}")
 
         # Legacy-DB migration: ensure the `role` column exists on users.
         if not _column_exists(conn, "users", "role"):
