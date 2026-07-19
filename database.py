@@ -621,6 +621,9 @@ def init_db():
         if not _column_exists(conn, "users", "agreed_terms_at"):
             conn.execute("ALTER TABLE users ADD COLUMN agreed_terms_at TEXT")
 
+        if not _column_exists(conn, "jobs", "env_vars"):
+            conn.execute("ALTER TABLE jobs ADD COLUMN env_vars TEXT")
+
         conn.commit()
     finally:
         conn.close()
