@@ -2,6 +2,7 @@ import json
 import asyncio
 from fastapi import APIRouter, Header, HTTPException, Request
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 from typing import Optional
 
 from database import get_db_connection
