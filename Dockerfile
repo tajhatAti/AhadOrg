@@ -1,36 +1,59 @@
-FROM python:3.11-slim
+# ============================================================
+# Ahad Co — RunSpace: SINGLE-SERVICE image (web + embedded job runner)
+# ------------------------------------------------------------
+# One Render web service does everything:
+#   • the site (auth, dashboard, code studio, admin console)
+#   • the job runner (spawn/auto-install/restart/log streaming) IN-PROCESS
+#     (activates automatically when RUNNER_SERVICE_URL is unset)
+#   • the public /live/{slug}/ gateway (HTTP + WebSocket)
+#
+# The classic two-service layout is still available (see runner/Dockerfile);
+# this image is the default deployment target.
+#
+# Base + toolchain mirror runner/Dockerfile so every language users can
+# deploy (python, node, bash, ruby, php, perl, lua, java, go, rust) runs
+# identically in both layouts.
+# ============================================================
 
-# Set working directory
-WORKDIR /app
+# Pin to Debian 12 (bookworm): the floating `python:3.11-slim` tag now points
+# to Debian 13 (trixie), which removed the `openjdk-17-jdk-headless` package
+# and breaks the build. Bookworm still ships OpenJDK 17.
+FROM python:3.11-slim-bookworm
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    libpq-dev \
+# System packages + language runtimes available to user jobs
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc g++ openjdk-17-jdk-headless ruby php-cli perl lua5.4 \
+    sqlite3 curl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first for better caching
-COPY requirements.txt .
+# Node.js (LTS) via NodeSource
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Go
+RUN curl -fsSL https://go.dev/dl/go1.22.0.linux-amd64.tar.gz \
+    | tar -C /usr/local -xz
+ENV PATH="/usr/local/go/bin:${PATH}"
 
-# Install additional dependencies for 2FA
-RUN pip install --no-cache-dir pyotp qrcode[pil]
+# Rust (rustc only, minimal)
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
+ENV PATH="/root/.cargo/bin:${PATH}"
 
-# Copy application code
+WORKDIR /app
+
+# Python deps: the site + the runner engine (jobs/gateway code lives in runner/)
+COPY requirements.txt /tmp/req-main.txt
+COPY runner/requirements.txt /tmp/req-runner.txt
+RUN pip install --no-cache-dir -r /tmp/req-main.txt -r /tmp/req-runner.txt
+
 COPY . .
 
-# Create non-root user
-RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
-USER appuser
+# Non-root user for the server (user code executes as this user via subprocess)
+RUN useradd -m runner
+USER runner
 
-# Expose port
 EXPOSE 8000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
-
-# Run with gunicorn for production
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "2", "--threads", "4", "--timeout", "120", "app:app"]
+# Render injects $PORT (usually 10000); default 8000 for local docker runs.
+CMD uvicorn app:app --host 0.0.0.0 --port ${PORT:-8000}

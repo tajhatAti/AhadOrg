@@ -68,3 +68,4 @@ yarn-error.log
 
 # Render
 .data/
+tests/e2e/pydeps/

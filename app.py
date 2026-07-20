@@ -25,6 +25,43 @@ STATIC_DIR = BASE_DIR / "static"
 
 app = FastAPI(title="Ahad Co — RunSpace")
 
+
+def _enable_embedded_runner() -> bool:
+    """Single-service mode: when RUNNER_SERVICE_URL is NOT set, the job runner
+    lives inside THIS process (one Render web service — the whole point of the
+    consolidation). Two effects:
+
+      1. services.runner_client talks to the runner through an in-process
+         ASGI client instead of the network.
+      2. The public /live/{slug}/* gateway (HTTP + WebSocket) is mounted on
+         THIS app — the handlers are reused verbatim from runner.app.
+
+    Setting RUNNER_SERVICE_URL restores the classic two-service layout and
+    this function leaves everything alone (return False).
+    """
+    if os.getenv("RUNNER_SERVICE_URL", "").strip():
+        return False
+    import secrets as _secrets
+    # runner.app reads SECRET at import; generate a throwaway internal one
+    # unless the operator pinned their own.
+    os.environ.setdefault("RUNNER_SERVICE_SECRET", _secrets.token_urlsafe(24))
+    import runner.app as _rapp
+    # Visitor-facing pages/URLs must point at THIS service, not a runner host.
+    base = (os.getenv("SITE_BASE_URL", "").strip()
+            or os.getenv("PUBLIC_BASE_URL", "").strip()
+            or os.getenv("RENDER_EXTERNAL_URL", "").strip())
+
+
+    if base and not _rapp.PUBLIC_BASE_URL:
+        _rapp.PUBLIC_BASE_URL = base.rstrip("/")
+    from services.proxy import router as _proxy_router
+    app.include_router(_proxy_router)
+    logger.info("Embedded runner ACTIVE — jobs + /live gateway run in this process.")
+    return True
+
+
+EMBEDDED_RUNNER = _enable_embedded_runner()
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -102,6 +139,7 @@ def health():
     return {
         "status": "ok",
         "database": DIALECT,
+        "runner": "embedded" if EMBEDDED_RUNNER else "remote",
         "brevo_api_key_set": bool(os.getenv("BREVO_API_KEY", "").strip()),
         "sender_email_set": bool(os.getenv("SENDER_EMAIL", "").strip()),
     }

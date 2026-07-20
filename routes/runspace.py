@@ -14,8 +14,8 @@ class JobCreateRequest(BaseModel):
 
 
 import asyncio
+import json
 
-import requests
 from fastapi.responses import StreamingResponse
 
 from services import runner_client
@@ -44,42 +44,21 @@ def execute_code(payload: ExecuteCodeRequest, request: Request, authorization: O
     #    would let strangers burn each other's allowance).
     rate_limit_user(user["id"], "exec")
 
-    # 3) Get runner config from env.
-    runner_url = os.getenv("RUNNER_SERVICE_URL", "").strip().rstrip("/")
-    runner_secret = os.getenv("RUNNER_SERVICE_SECRET", "").strip()
-
-    if not runner_url or not runner_secret:
-        raise HTTPException(
-            status_code=503,
-            detail="Code execution is not configured. Set RUNNER_SERVICE_URL and RUNNER_SERVICE_SECRET.",
-        )
-
-    # 4) Forward to runner service (server-to-server, secret never sent to browser).
+    # 3) Forward to the runner (embedded in-process, or remote when
+    #    RUNNER_SERVICE_URL is set). Secret never leaves the server.
     try:
-        response = requests.post(
-            runner_url + "/internal/execute",
-            json={
-                "language": payload.language,
-                "code": payload.code,
-                "stdin": payload.stdin or "",
-            },
-            headers={
-                "Authorization": "Bearer " + runner_secret,
-                "Content-Type": "application/json",
-            },
-            # execution time (MAX_EXECUTION_TIME_MS) + auto pip-install budget
-            timeout=130,
-        )
-    except requests.ConnectionError:
-        logger.error("Runner service unreachable at %s", runner_url)
+        response = runner_client._runner_http("POST", "/internal/execute", {
+            "language": payload.language,
+            "code": payload.code,
+            "stdin": payload.stdin or "",
+        })
+    except HTTPException:
+        raise
+    except Exception:
+        logger.error("Runner call failed unexpectedly")
         raise HTTPException(
             status_code=503,
             detail="Code execution service is temporarily unavailable. Please try again later.",
-        )
-    except requests.Timeout:
-        raise HTTPException(
-            status_code=504,
-            detail="Code execution took too long. Please simplify your code.",
         )
 
     if response.status_code == 401:
@@ -87,9 +66,14 @@ def execute_code(payload: ExecuteCodeRequest, request: Request, authorization: O
     if response.status_code == 403:
         raise HTTPException(status_code=500, detail="Runner secret mismatch. Contact admin.")
     if response.status_code != 200:
+        detail = None
+        try:
+            detail = response.json().get("detail")
+        except Exception:
+            pass
         raise HTTPException(
             status_code=502,
-            detail="Code execution service returned an error ({}).".format(response.status_code),
+            detail=detail or "Code execution service returned an error ({}).".format(response.status_code),
         )
 
     result = response.json()

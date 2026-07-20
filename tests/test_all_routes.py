@@ -113,16 +113,26 @@ except TypeError:
     r = c.get(f"/code/s/{share_tok}")
 check("GET /code/s/{token} (legacy link healed)", r, (200, 301, 302, 307, 308))
 
-# ---------- jobs + execute (no runner configured → graceful) ----------
+# ---------- jobs + execute (embedded runner → REAL execution here) ----------
+# Single-service mode activates automatically (no RUNNER_SERVICE_URL in the
+# sandbox), so these routes now exercise the in-process engine for real.
 r = c.get("/api/jobs", headers=H2); check("GET /api/jobs (200, runner state reported)", r)
-r = c.post("/api/jobs", json={"name": "j", "language": "python", "code": "print(1)"}, headers=H2); check("POST /api/jobs (graceful 503, no runner)", r, (503,))
-r = c.post("/api/execute", json={"language": "python", "code": "print(1)"}, headers=H2); check("POST /api/execute (graceful 503, no runner)", r, (503,))
+r = c.post("/api/jobs", json={"name": "j", "language": "python", "code": "print(1)"}, headers=H2)
+check("POST /api/jobs (embedded: real 201)", r, (200, 201))
+r = c.post("/api/execute", json={"language": "python", "code": "print(1)"}, headers=H2)
+check("POST /api/execute (embedded: real 200)", r)
+ok_exec = r.status_code == 200 and (r.json().get("stdout") or "").strip() == "1"
+results.append(("execute stdout == '1'", r.status_code, ok_exec))
+print(("✓ " if ok_exec else "✗ FAIL ") + f"{'execute stdout == 1 (really ran in-process)':56s} [{r.status_code}]")
 conn_exec("INSERT INTO jobs (user_id, name, language, code, runner_job_id, created_at, updated_at) SELECT id,'jx','python','x',NULL,?,? FROM users WHERE username='matrix'", (now_utc_str(), now_utc_str()))
 jid = dict(conn_exec("SELECT id FROM jobs WHERE name='jx'")[0])["id"]
 r = c.get(f"/api/jobs/{jid}/logs", headers=H2); check("GET /api/jobs/{id}/logs (never-started)", r)
 r = c.post(f"/api/jobs/{jid}/stop", headers=H2); check("POST /api/jobs/{id}/stop (no runner id)", r)
 r = c.post(f"/api/jobs/{jid}/restart", headers=H2); check("POST /api/jobs/{id}/restart (graceful)", r, (200, 502, 503))
-r = c.post(f"/api/jobs/{jid}/access", json={"public": False}, headers=H2); check("POST /api/jobs/{id}/access (409 guard)", r, (409,))
+# after the restart above the job IS live on the embedded runner, so the
+# access toggle works for real (it 409s only when there's no runner job).
+r = c.post(f"/api/jobs/{jid}/access", json={"public": False}, headers=H2)
+check("POST /api/jobs/{id}/access (live → 200)", r, (200, 409))
 r = c.delete(f"/api/jobs/{jid}", headers=H2); check("DELETE /api/jobs/{id}", r)
 
 # ---------- misc ----------

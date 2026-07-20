@@ -64,7 +64,12 @@ f = _job_web_fields({"status": "offline"})
 check("no slug → no web fields", f == {})
 del os.environ["RUNNER_SERVICE_URL"]
 f = _job_web_fields({"web_slug": "x-1", "web": True, "web_public": True})
-check("no runner url configured → no web fields", f == {})
+# embedded single-service mode: the gateway moves onto THIS app, so the URL
+# is built from the site base (env) or the local dev fallback — never "{}".
+expected_base = (os.getenv("SITE_BASE_URL", "").strip() or os.getenv("PUBLIC_BASE_URL", "").strip()
+                 or os.getenv("RENDER_EXTERNAL_URL", "").strip()
+                 or "http://127.0.0.1:" + os.getenv("PORT", "8000")).rstrip("/")
+check("embedded mode → url on this service's base", f.get("web_url") == f"{expected_base}/live/x-1/")
 
 # ---------------- jobs access endpoint guard rails ----------------
 tok3 = make_user("jobtoggler", "jt@t.dev", "pass-789")
