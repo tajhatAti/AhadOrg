@@ -36,6 +36,7 @@ import logging
 import os
 import sqlite3
 import threading
+import time
 from pathlib import Path
 
 logger = logging.getLogger("ahad-co-db")
@@ -59,6 +60,66 @@ DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 # Users can force a value with PG_SSLMODE; we default to "prefer" so it works on
 # managed (SSL) hosts as well as a local no-SSL dev server.
 PG_SSLMODE = os.getenv("PG_SSLMODE", "prefer")
+
+# ---------------------------------------------------------------------------
+# DATABASE_URL sanity check
+# ---------------------------------------------------------------------------
+# A malformed DATABASE_URL makes psycopg2 fail deep inside libpq with a cryptic
+# DNS-style error ("could not translate host name \"<garbage>\" to address").
+# The most common cause: the password contains raw special characters ('#',
+# '@', spaces) that were not percent-encoded, so the URL parser glues password
+# fragments onto the hostname. Catch that HERE, at startup, and fail with an
+# actionable message instead of a 50-line stack trace.
+def _validate_database_url(url: str) -> None:
+    from urllib.parse import urlparse
+
+    problems: list[str] = []
+
+    # 1) Accidental whitespace/newlines from copy-pasting into dashboards.
+    if any(ch.isspace() for ch in url):
+        problems.append("contains whitespace (accidental space/newline while copy-pasting?)")
+
+    # 2) A raw '#' truncates the URL at the fragment marker and silently eats
+    #    the rest of the password. In a valid URL it only appears as %23.
+    if "#" in url:
+        problems.append("raw '#' found in the URL — encode it as %23 (password character)")
+
+    # 3) More than one '@' means the password holds an unencoded '@'.
+    if url.split("://", 1)[-1].count("@") > 1:
+        problems.append("more than one '@' found — encode '@' inside the password as %40")
+
+    # 4) Structural checks: scheme, hostname, port, password.
+    try:
+        parsed = urlparse(url)
+        host = parsed.hostname            # may raise ValueError on bad port
+        _ = parsed.port
+        if not host:
+            problems.append("no hostname found (expected e.g. 'xyz.pooler.supabase.com')")
+        if parsed.password is None:
+            problems.append("no password found (expected form: postgresql://user:PASSWORD@host:5432/db)")
+    except ValueError as exc:
+        problems.append(f"cannot be parsed ({exc})")
+
+    if problems:
+        bullet_list = "\n".join(f"    * {p}" for p in problems)
+        raise RuntimeError(
+            "\n\n"
+            "==============================================================\n"
+            "  DATABASE_URL looks malformed — refusing to start.\n"
+            "--------------------------------------------------------------\n"
+            f"{bullet_list}\n\n"
+            "  Fix: copy the exact connection string from your provider\n"
+            "  (Supabase -> Project Settings -> Database -> Session pooler)\n"
+            "  and percent-encode special characters in the PASSWORD:\n"
+            "      #  ->  %23        @  ->  %40        space  ->  %20\n"
+            "  (পাসওয়ার্ডে #, @ বা স্পেস থাকলে অবশ্যই encode করতে হবে।)\n"
+            "  Example:\n"
+            "      postgresql://postgres.REF:ENCODED_PASSWORD@HOST:5432/postgres\n"
+            "==============================================================\n"
+        )
+
+if DIALECT == "postgres":
+    _validate_database_url(_DATABASE_URL)
 
 logger.info("Database dialect: %s", DIALECT)
 
@@ -151,7 +212,19 @@ class _Cursor:
                 row = self._cur.fetchone()
                 self._returning_id = row["id"] if row else None
                 return self
-        self._cur.execute(sql_t, tuple(params))
+        try:
+            self._cur.execute(sql_t, tuple(params))
+        except Exception as exc:
+            # Every query in the app passes through HERE — log failures so a
+            # leftover SQLite-only construct (or any DB error) is visible in
+            # logs immediately instead of hiding behind a 500. Params are
+            # intentionally NOT logged: they can carry code secrets.
+            logger.error(
+                "DB query failed [%s]: %s | SQL: %s",
+                DIALECT, type(exc).__name__, " ".join(sql_t.split())[:500],
+                exc_info=False,
+            )
+            raise
         return self
 
     def executemany(self, sql, seq_of_params):
@@ -222,6 +295,22 @@ class _Connection:
 # ---------------------------------------------------------------------------
 # PostgreSQL connection pool
 # ---------------------------------------------------------------------------
+#
+# WHY THE EXTRA MACHINERY BELOW (read: the "site hangs after a while" fix):
+#   Render's free instances sleep after ~15 min idle, and Supabase's pooler —
+#   plus every NAT between them — silently drops idle TCP sessions. A pooled
+#   connection can therefore be dead WITHOUT psycopg2 knowing, and the first
+#   query on it hangs for minutes (default TCP timeouts are ~2 HOURS).
+#   Three defences, layered:
+#     1. TCP keepalives + connect_timeout on every new connection, so a dead
+#        socket is detected in ~80s instead of ~2h, and connects cap at 10s.
+#     2. After a long idle gap the instance almost surely slept: rebuild the
+#        whole pool BEFORE handing anything out — fresh connects are ~200ms.
+#     3. Probe every checkout with SELECT 1; discard-and-retry dead conns.
+_POOL_IDLE_RESET_S = 90.0   # more silence than this => do not trust the pool
+_last_db_activity = 0.0     # monotonic timestamp of the last healthy checkout
+
+
 def _get_pool():
     global _pool
     if _pool is not None:
@@ -233,7 +322,16 @@ def _get_pool():
             # sslmode can also live inside DATABASE_URL; only inject a default
             # when the user hasn't already specified one.
             dsn = _DATABASE_URL
-            connect_kwargs = {}
+            connect_kwargs = {
+                # libpq knobs (psycopg2 passes these straight through)
+                "connect_timeout": 10,
+                "keepalives": 1,
+                "keepalives_idle": 30,
+                "keepalives_interval": 10,
+                "keepalives_count": 5,
+            }
+            if "application_name" not in dsn:
+                connect_kwargs["application_name"] = "ahad-co"
             if "sslmode" not in _DATABASE_URL and PG_SSLMODE:
                 connect_kwargs["sslmode"] = PG_SSLMODE
             logger.info("Creating PostgreSQL connection pool (maxconn=8)")
@@ -245,6 +343,56 @@ def _get_pool():
                 **connect_kwargs,
             )
     return _pool
+
+
+def _reset_pool():
+    """Kill every pooled connection; the next _get_pool() builds a fresh pool."""
+    global _pool
+    with _pool_lock:
+        old, _pool = _pool, None
+    if old is not None:
+        try:
+            old.closeall()
+        except Exception:
+            pass
+
+
+def _checkout_pg():
+    """Take a LIVE connection out of the pool (see defences at the top)."""
+    global _last_db_activity
+    now = time.monotonic()
+    if _last_db_activity and (now - _last_db_activity) > _POOL_IDLE_RESET_S:
+        # Defence 2 — we almost certainly slept; don't even bother probing
+        # connections that were frozen alongside the process.
+        logger.info("PostgreSQL pool idle %.0fs — rebuilding (post-sleep safety)",
+                    now - _last_db_activity)
+        _reset_pool()
+    pool = _get_pool()
+    for _ in range(3):
+        raw = pool.getconn()
+        try:
+            # Defence 3 — cheap liveness probe (round trip is ~ms, a dead
+            # conn costs a hang if we skip this)
+            cur = raw.cursor()
+            cur.execute("SELECT 1")
+            cur.close()
+            _last_db_activity = time.monotonic()
+            return raw
+        except Exception as exc:
+            logger.warning("Discarding dead pooled PostgreSQL connection: %s",
+                           type(exc).__name__)
+            try:
+                pool.putconn(raw, close=True)   # close & drop from the pool
+            except Exception:
+                try:
+                    raw.close()
+                except Exception:
+                    pass
+    # Everything we were offered was dead — nuke the pool and take a fresh one.
+    _reset_pool()
+    raw = _get_pool().getconn()
+    _last_db_activity = time.monotonic()
+    return raw
 
 
 def _return_to_pool(conn):
@@ -263,9 +411,7 @@ def _return_to_pool(conn):
 # ---------------------------------------------------------------------------
 def get_db_connection() -> _Connection:
     if DIALECT == "postgres":
-        pool = _get_pool()
-        raw = pool.getconn()
-        return _Connection(raw)
+        return _Connection(_checkout_pg())
 
     conn = sqlite3.connect(DB_PATH, timeout=30)
     conn.row_factory = sqlite3.Row
@@ -289,6 +435,9 @@ _SCHEMA_TABLES = [
         reset_otp TEXT,
         reset_otp_created_at TEXT,
         reset_verified INTEGER NOT NULL DEFAULT 0,
+        password_changed_at TEXT,
+        otp_attempts INTEGER NOT NULL DEFAULT 0,
+        reset_otp_attempts INTEGER NOT NULL DEFAULT 0,
         role TEXT NOT NULL DEFAULT 'user',
         phone TEXT,
         custom_code TEXT,
@@ -306,18 +455,6 @@ _SCHEMA_TABLES = [
         ip_address TEXT,
         created_at TEXT NOT NULL,
         last_seen TEXT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-    )
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS vault_entries (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        type TEXT NOT NULL,
-        label TEXT NOT NULL,
-        value TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     )
     """,
@@ -360,50 +497,15 @@ _SCHEMA_TABLES = [
     )
     """,
     """
-    CREATE TABLE IF NOT EXISTS user_notes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        title TEXT NOT NULL,
-        content TEXT NOT NULL,
-        color TEXT DEFAULT '#7C6CF6',
-        pinned INTEGER DEFAULT 0,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-    )
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS user_bookmarks (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        title TEXT NOT NULL,
-        url TEXT NOT NULL,
-        description TEXT,
-        category TEXT,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-    )
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS user_categories (
+    CREATE TABLE IF NOT EXISTS jobs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
         name TEXT NOT NULL,
-        icon TEXT DEFAULT '📁',
-        color TEXT DEFAULT '#7C6CF6',
+        language TEXT NOT NULL,
+        code TEXT NOT NULL,
+        runner_job_id TEXT,
         created_at TEXT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-    )
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS api_keys (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        name TEXT NOT NULL,
-        key_hash TEXT NOT NULL,
-        last_used TEXT,
-        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     )
     """,
@@ -419,114 +521,25 @@ _SCHEMA_TABLES = [
     )
     """,
     """
-    CREATE TABLE IF NOT EXISTS notifications (
+    -- Admin panel: every destructive action lands here (who did what, when).
+    CREATE TABLE IF NOT EXISTS admin_audit_log (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        type TEXT NOT NULL,
-        title TEXT NOT NULL,
-        message TEXT NOT NULL,
-        is_read INTEGER DEFAULT 0,
-        created_at TEXT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        admin_id INTEGER NOT NULL,
+        action TEXT NOT NULL,
+        target TEXT,
+        details TEXT,
+        created_at TEXT NOT NULL
     )
     """,
     """
-    CREATE TABLE IF NOT EXISTS user_cards (
+    -- Public "Report abuse" inbox for live URLs / published pages.
+    CREATE TABLE IF NOT EXISTS abuse_reports (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        label TEXT NOT NULL,
-        holder TEXT,
-        number TEXT NOT NULL,
-        expiry TEXT,
-        cvv TEXT,
-        brand TEXT,
-        note TEXT,
-        color TEXT DEFAULT '#6366f1',
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-    )
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS user_tasks (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        title TEXT NOT NULL,
-        completed INTEGER NOT NULL DEFAULT 0,
-        priority INTEGER NOT NULL DEFAULT 0,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-    )
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS user_identities (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        type TEXT NOT NULL,
-        label TEXT NOT NULL,
-        fields TEXT,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-    )
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS user_contacts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        name TEXT NOT NULL,
-        email TEXT,
-        phone TEXT,
-        company TEXT,
-        address TEXT,
-        note TEXT,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-    )
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS user_wifi (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        label TEXT NOT NULL,
-        ssid TEXT NOT NULL,
-        password TEXT,
-        security TEXT DEFAULT 'WPA',
-        hidden INTEGER DEFAULT 0,
-        location TEXT,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-    )
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS user_servers (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        name TEXT NOT NULL,
-        host TEXT NOT NULL,
-        port INTEGER DEFAULT 22,
-        username TEXT,
-        password TEXT,
-        keyfile TEXT,
-        note TEXT,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-    )
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS user_recovery (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        label TEXT NOT NULL,
-        words TEXT NOT NULL,
-        word_count INTEGER DEFAULT 12,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        url TEXT NOT NULL,
+        reason TEXT,
+        ip TEXT,
+        status TEXT NOT NULL DEFAULT 'open',
+        created_at TEXT NOT NULL
     )
     """,
     """
@@ -571,9 +584,42 @@ def init_db():
         for ddl in _SCHEMA_TABLES:
             conn.execute(_translate_ddl(ddl))
 
+
+        # ------------------------------------------------------------------
+        # MIGRATION 001 (developer-first pivot): the vault product is gone.
+        # Drop every table that backed Vault/Cards/IDs/Contacts/WiFi/Servers/
+        # Seeds/Notes/Bookmarks/Tasks (+ never-used api_keys/notifications).
+        # Idempotent — safe on every boot. Kept tables (users, sessions,
+        # user_2fa, jobs, snippets, activity_log, admin_audit_log, abuse_reports,
+        # login_history, user_preferences) only reference users, never these.
+        _DROPPED_VAULT_TABLES = (
+            "wifi_shares", "user_wifi",  # child first (FK parent second)
+            "vault_entries", "user_notes", "user_bookmarks", "user_categories",
+            "user_cards", "user_tasks", "user_identities", "user_contacts",
+            "user_servers", "user_recovery", "api_keys", "notifications",
+        )
+        for _t in _DROPPED_VAULT_TABLES:
+            conn.execute(f"DROP TABLE IF EXISTS {_t}")
+
         # Legacy-DB migration: ensure the `role` column exists on users.
         if not _column_exists(conn, "users", "role"):
             conn.execute("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'")
+
+        # Wrong-OTP-attempt counters (server-side OTP rate limiting).
+        if not _column_exists(conn, "users", "otp_attempts"):
+            conn.execute("ALTER TABLE users ADD COLUMN otp_attempts INTEGER NOT NULL DEFAULT 0")
+        if not _column_exists(conn, "users", "reset_otp_attempts"):
+            conn.execute("ALTER TABLE users ADD COLUMN reset_otp_attempts INTEGER NOT NULL DEFAULT 0")
+        if not _column_exists(conn, "users", "password_changed_at"):
+            conn.execute("ALTER TABLE users ADD COLUMN password_changed_at TEXT")
+
+        # Pivot: admin flag, suspension flag, terms-of-use acceptance stamp.
+        if not _column_exists(conn, "users", "is_admin"):
+            conn.execute("ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0")
+        if not _column_exists(conn, "users", "is_suspended"):
+            conn.execute("ALTER TABLE users ADD COLUMN is_suspended INTEGER NOT NULL DEFAULT 0")
+        if not _column_exists(conn, "users", "agreed_terms_at"):
+            conn.execute("ALTER TABLE users ADD COLUMN agreed_terms_at TEXT")
 
         conn.commit()
     finally:

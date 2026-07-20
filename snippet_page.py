@@ -97,6 +97,8 @@ _VIEWER = """<!DOCTYPE html>
     font-size:10px;color:rgba(0,0,0,.18);text-decoration:none;letter-spacing:.3px;
     z-index:5;pointer-events:none;
   }
+  .attr.rep{left:10px;right:auto;pointer-events:auto;}
+  .attr.rep:hover{color:rgba(0,0,0,.45);}
   @media (prefers-color-scheme: dark){
     body,.read{background:#0b0d14;}.read{color:#d4d8e8;}.attr{color:rgba(255,255,255,.14);}
   }
@@ -106,6 +108,8 @@ _VIEWER = """<!DOCTYPE html>
 <script type="application/json" id="data">__DATA__</script>
 <div class="stage" id="stage"></div>
 <a class="attr" href="/" tabindex="-1">Ahad Co</a>
+<a class="attr rep" id="reportLink" href="/report-abuse" tabindex="-1">Report abuse</a>
+<script>document.getElementById('reportLink').href='/report-abuse?url='+encodeURIComponent(location.href);</script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
 (function(){

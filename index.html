@@ -3,13 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#08090d">
-<title>Ahad Co — Private Vault</title>
+<meta name="theme-color" content="#171309">
+<title>Ahad Co — RunSpace · Free Bot Hosting</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/pro.css">
-<link rel="stylesheet" href="/static/emoji.css">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,560;0,9..144,600;1,9..144,500;1,9..144,560&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/pro.css?v=20260719g">
+<link rel="stylesheet" href="/static/emoji.css?v=20260719g">
+<!-- Ahad Classic theme (editorial minimal) — loaded LAST so it wins the cascade -->
+<link rel="stylesheet" href="/static/classic.css?v=20260719g">
 <script>
   // Boot guard — prevents a flash of the wrong screen before JS decides.
   (function () {
@@ -62,40 +64,30 @@
 <section class="hero" id="screen-landing">
   <div class="hero-grid">
     <div class="hero-copy reveal">
-      <div class="eyebrow"><span class="dot-live"></span> End-to-end encrypted vault</div>
-      <h1 class="hero-title">Your private data,<br><span class="grad">always within reach.</span></h1>
-      <p class="hero-sub">A single, permanent home for your passwords, cards, notes, bookmarks and tasks — behind password-grade auth and two-factor protection.</p>
-      <div class="hero-showcase" aria-hidden="true">
-        <span class="premium-emoji">💣</span>
-        <span class="premium-emoji">🔥</span>
-        <span class="premium-emoji">✅</span>
-        <span class="premium-emoji">❤️</span>
-        <span class="premium-emoji">⭐</span>
-        <span class="premium-emoji">💎</span>
-        <span class="premium-emoji">🎉</span>
-        <span class="premium-emoji">💯</span>
-      </div>
+      <div class="eyebrow"><span class="dot-live"></span> Free hosting · online 24/7</div>
+      <h1 class="hero-title">Host your Telegram bot,<br><span class="grad">live in seconds — free.</span></h1>
+      <p class="hero-sub"><b>RunSpace</b> runs your bot, scraper or API around the clock: paste the code, press deploy, share the public URL. Missing libraries install themselves, and there is no proprietary language to learn — it is just your code.</p>
       <div class="hero-actions">
         <button class="btn-primary lg" onclick="showScreen('screen-signup')">Create free account <span class="arr">→</span></button>
         <button class="btn-ghost lg" onclick="showScreen('screen-signin')">I have an account</button>
       </div>
       <div class="hero-trust">
-        <div class="trust-item"><span class="premium-emoji">🔐</span> bcrypt hashing</div>
-        <div class="trust-item"><span class="premium-emoji">📱</span> TOTP 2FA</div>
-        <div class="trust-item"><span class="premium-emoji">🗄️</span> PostgreSQL ready</div>
+        <div class="trust-item"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg> Live URL in seconds</div>
+        <div class="trust-item"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 5 13.5h5L8.8 22l8-11.5h-5L13 2z"/></svg> Libraries auto-install</div>
+        <div class="trust-item"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 13.9 9l5.6 1.9-5.6 1.9L12 18.4l-1.9-5.6L4.5 10.9 10.1 9z"/></svg> No lock-in — real code</div>
       </div>
     </div>
     <div class="hero-art reveal">
       <div class="glass-card">
         <div class="gc-top">
-          <span class="gc-chip">SECURE</span>
-          <span class="gc-lock"><span class="premium-emoji">🔒</span></span>
+          <span class="gc-chip gc-live">LIVE</span>
+          <span class="gc-lock"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg></span>
         </div>
-        <div class="gc-row"><span class="gc-k">Vault items</span><span class="gc-v">12</span></div>
-        <div class="gc-row"><span class="gc-k">Notes</span><span class="gc-v">38</span></div>
-        <div class="gc-row"><span class="gc-k">Sessions</span><span class="gc-v active">2 active</span></div>
+        <div class="gc-row"><span class="gc-k">App</span><span class="gc-v">my-tg-bot</span></div>
+        <div class="gc-row"><span class="gc-k">Status</span><span class="gc-v active">● running · 24/7</span></div>
+        <div class="gc-row"><span class="gc-k">Public URL</span><span class="gc-v">/live/my-tg-bot</span></div>
         <div class="gc-bar"><i></i></div>
-        <div class="gc-foot">2FA enabled · last sync just now</div>
+        <div class="gc-foot">python · requests auto-installed · restarts itself</div>
       </div>
     </div>
   </div>
@@ -105,16 +97,16 @@
 <section class="section" id="features">
   <div class="section-head reveal">
     <div class="eyebrow center">FEATURES</div>
-    <h2>Everything you need to stay <span class="grad">organised &amp; secure</span></h2>
-    <p>A complete toolkit for protecting and managing your digital life.</p>
+    <h2>Write code here, <span class="grad">run it here — free</span></h2>
+    <p>A code studio and a 24/7 runner up front — and nothing else competing for your attention.</p>
   </div>
   <div class="feat-grid">
-    <div class="feat reveal"><div class="feat-ic"><span class="premium-emoji">🔐</span></div><h3>Vault</h3><p>Passwords, codes and secrets, neatly grouped and one tap to copy.</p></div>
-    <div class="feat reveal"><div class="feat-ic"><span class="premium-emoji">💳</span></div><h3>Cards</h3><p>Payment cards saved securely, masked by default with instant reveal.</p></div>
-    <div class="feat reveal"><div class="feat-ic"><span class="premium-emoji">📝</span></div><h3>Notes</h3><p>Colour-coded notes and a diary that stay synced across sign-ins.</p></div>
-    <div class="feat reveal"><div class="feat-ic"><span class="premium-emoji">🔖</span></div><h3>Bookmarks</h3><p>Save and categorise the links you never want to lose.</p></div>
-    <div class="feat reveal"><div class="feat-ic"><span class="premium-emoji">✅</span></div><h3>Tasks</h3><p>A lightweight to-do list with priorities, right inside your vault.</p></div>
-    <div class="feat reveal"><div class="feat-ic"><span class="premium-emoji">📊</span></div><h3>Activity log</h3><p>Track logins, OTP attempts and security events in real time.</p></div>
+    <div class="feat reveal"><div class="feat-ic"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg></div><h3>RunSpace · free hosting</h3><p>Deploy a Telegram bot, scraper or API in seconds. It restarts itself and stays online 24/7 — up to 3 apps free.</p></div>
+    <div class="feat reveal"><div class="feat-ic"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 8l-4.5 4L9 16M15 8l4.5 4L15 16"/></svg></div><h3>Code Studio</h3><p>Write, run and publish right in the browser — share a live page of your work with a single tap.</p></div>
+    <div class="feat reveal"><div class="feat-ic"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5a13.5 13.5 0 0 1 0 17M12 3.5a13.5 13.5 0 0 0 0 17"/></svg></div><h3>Public live URLs</h3><p>Open a web server on the PORT env variable and a free /live/… link appears. Switch it public or private anytime.</p></div>
+    <div class="feat reveal"><div class="feat-ic"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 3.5h-8a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h8M17 8l4 4-4 4M8 12h13"/></svg></div><h3>Zero lock-in</h3><p>Python, JavaScript, Bash, Ruby, PHP — your real code as-is. No proprietary scripting language to learn, ever.</p></div>
+    <div class="feat reveal"><div class="feat-ic"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 5 13.5h5L8.8 22l8-11.5h-5L13 2z"/></svg></div><h3>Free forever tier</h3><p>3 apps per account, auto library install, live logs and public URLs included. No credit card, no trial countdown.</p></div>
+    <div class="feat reveal"><div class="feat-ic"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20.5h16"/><path d="M7 16.5v-4M12 16.5v-9M17 16.5v-6.5"/></svg></div><h3>Full visibility</h3><p>Live log streaming for running apps, plus a record of sign-ins and security events.</p></div>
   </div>
 </section>
 
@@ -126,17 +118,17 @@
     <p>Industry-standard practises, running in the background.</p>
   </div>
   <div class="sec-grid">
-    <div class="sec-card reveal"><h4><span class="premium-emoji">🔐</span> bcrypt hashing</h4><p>Passwords are never stored in plain text.</p></div>
-    <div class="sec-card reveal"><h4><span class="premium-emoji">🎟️</span> One-time codes</h4><p>Email OTP expires automatically after 10 minutes.</p></div>
-    <div class="sec-card reveal"><h4><span class="premium-emoji">🛡️</span> Session control</h4><p>Review and revoke active devices instantly.</p></div>
-    <div class="sec-card reveal"><h4><span class="premium-emoji">⚠️</span> Rate limiting</h4><p>Brute-force protection on every auth endpoint.</p></div>
+    <div class="sec-card reveal"><h4><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg> bcrypt hashing</h4><p>Passwords are never stored in plain text.</p></div>
+    <div class="sec-card reveal"><h4><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 8.5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v1.3a2.7 2.7 0 1 0 0 5.4v1.3a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2v-1.3a2.7 2.7 0 1 0 0-5.4z"/><path d="M12 8v1.6M12 11.6v1.6M12 15.2v1.3"/></svg> One-time codes</h4><p>Email OTP expires automatically after 10 minutes.</p></div>
+    <div class="sec-card reveal"><h4><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 5 6v5.5c0 4.5 3 7.6 7 9 4-1.4 7-4.5 7-9V6z"/><path d="M9.2 11.8l2 2 3.6-4"/></svg> Session control</h4><p>Review and revoke active devices instantly.</p></div>
+    <div class="sec-card reveal"><h4><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.8 19.5h18.4z"/><path d="M12 10v4.2M12 17.2v.1"/></svg> Rate limiting</h4><p>Brute-force protection on every auth endpoint.</p></div>
   </div>
 </section>
 
 <footer class="foot">
   <div class="foot-inner">
     <div class="brand"><div class="brand-mark sm">AC</div><span class="brand-text">Ahad Co</span></div>
-    <p>© 2026 Ahad Co · Built for permanent, private storage.</p>
+    <p>© 2026 Ahad Co · Free code hosting. · <a href="/report-abuse" style="color:inherit">Report abuse</a></p>
   </div>
 </footer>
 
@@ -146,9 +138,7 @@
     <button class="back" onclick="showScreen('screen-landing')">← Back</button>
     <div class="auth-head">
       <div class="brand-mark lg">AC</div>
-      <div class="eyebrow">GET STARTED</div>
       <h2>Create your account</h2>
-      <p>Start securing your data in seconds.</p>
     </div>
     <form id="formSignup" class="auth-form">
       <label class="field"><span>Username</span><input type="text" id="su_username" placeholder="e.g. ahad_r" autocomplete="username" required></label>
@@ -157,6 +147,7 @@
         <div class="strength-bar"><div class="strength-fill" id="strengthFill"></div></div>
         <span class="strength-label" id="strengthLabel"></span>
       </label>
+      <label class="tos-check"><input type="checkbox" id="su_terms"><span>I agree to the <a href="/terms" onclick="event.preventDefault();event.stopPropagation();window.open('/terms','_blank','noopener')"><b>Terms of Use</b></a> — no illegal content, no crypto-mining, no spam, and no abuse of public URLs.</span></label>
       <button type="submit" class="btn-primary block" id="btnSignup"><span>Create account</span></button>
     </form>
     <p class="auth-switch">Already have an account? <a onclick="showScreen('screen-signin')">Sign in</a></p>
@@ -169,9 +160,7 @@
     <button class="back" onclick="showScreen('screen-landing')">← Back</button>
     <div class="auth-head">
       <div class="brand-mark lg">AC</div>
-      <div class="eyebrow">WELCOME BACK</div>
       <h2>Sign in</h2>
-      <p>Access your secure vault.</p>
     </div>
     <form id="formSignin" class="auth-form">
       <label class="field"><span>Email or username</span><input type="text" id="si_username" placeholder="you@example.com" autocomplete="username" required></label>
@@ -189,23 +178,22 @@
 <!-- ================= AUTH: OTP VERIFY ================= -->
 <div class="auth" id="screen-otp">
   <div class="auth-card">
+    <button class="back" onclick="showScreen('screen-signin')">← Back</button>
     <div class="auth-head">
-      <div class="otp-emoji"><span class="premium-emoji">✉️</span></div>
-      <div class="eyebrow">VERIFY</div>
+      <div class="brand-mark lg">AC</div>
       <h2>Verify your email</h2>
-      <p id="otpEmailNote">Enter the 6-digit code we sent to your inbox.</p>
+      <p id="otpEmailNote">Enter the 6-digit code sent to your email.</p>
     </div>
+    <div class="otp-expire" id="otpExpire"></div>
     <div class="otp-boxes" id="otpBoxesSignup">
       <input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric">
       <input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric">
     </div>
-    <button class="btn-secondary block" id="otpPasteBtn" type="button">📋 Paste from clipboard</button>
     <button class="btn-primary block" id="btnVerify"><span>Verify &amp; continue</span></button>
     <div class="otp-foot">
       <span id="resendTimer"></span>
       <a id="resendLink" class="link">Resend code</a>
     </div>
-    <p class="auth-hint">Your code is valid for 10 minutes — you can safely switch apps to check your mail and come back.</p>
   </div>
 </div>
 
@@ -213,7 +201,7 @@
 <div class="auth" id="screen-forgot1">
   <div class="auth-card">
     <button class="back" onclick="showScreen('screen-signin')">← Back</button>
-    <div class="auth-head"><div class="otp-emoji"><span class="premium-emoji">🔑</span></div><div class="eyebrow">RESET</div><h2>Reset password</h2><p>We'll email you a verification code.</p></div>
+    <div class="auth-head"><div class="brand-mark lg">AC</div><h2>Reset password</h2><p>We'll email you a 6-digit code.</p></div>
     <form id="formForgot1" class="auth-form">
       <label class="field"><span>Email</span><input type="email" id="fp_email" placeholder="you@example.com" required></label>
       <button type="submit" class="btn-primary block" id="btnForgot1"><span>Send reset code</span></button>
@@ -225,7 +213,8 @@
 <div class="auth" id="screen-forgot2">
   <div class="auth-card">
     <button class="back" onclick="showScreen('screen-forgot1')">← Back</button>
-    <div class="auth-head"><div class="otp-emoji"><span class="premium-emoji">🔢</span></div><div class="eyebrow">RESET</div><h2>Enter reset code</h2><p>Check your email for the 6-digit code.</p></div>
+    <div class="auth-head"><div class="brand-mark lg">AC</div><h2>Enter reset code</h2><p>Check your email for the 6-digit code.</p></div>
+    <div class="otp-expire" id="otpExpireReset"></div>
     <div class="otp-boxes" id="otpBoxesForgot">
       <input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric">
       <input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric">
@@ -238,10 +227,13 @@
 <div class="auth" id="screen-forgot3">
   <div class="auth-card">
     <button class="back" onclick="showScreen('screen-forgot2')">← Back</button>
-    <div class="auth-head"><div class="otp-emoji"><span class="premium-emoji">🛡️</span></div><div class="eyebrow">RESET</div><h2>New password</h2><p>Choose a strong new password.</p></div>
+    <div class="auth-head"><div class="brand-mark lg">AC</div><h2>New password</h2></div>
     <form id="formForgot3" class="auth-form">
-      <label class="field"><span>New password</span><input type="password" id="fp_newpass" placeholder="••••••••" required></label>
-      <label class="field"><span>Confirm password</span><input type="password" id="fp_confirmpass" placeholder="••••••••" required></label>
+      <label class="field"><span>New password</span><input type="password" id="fp_newpass" placeholder="••••••••" autocomplete="new-password" required>
+        <div class="strength-bar"><div class="strength-fill" id="strengthFill3"></div></div>
+        <span class="strength-label" id="strengthLabel3"></span>
+      </label>
+      <label class="field"><span>Confirm password</span><input type="password" id="fp_confirmpass" placeholder="••••••••" autocomplete="new-password" required></label>
       <button type="submit" class="btn-primary block" id="btnForgot3"><span>Update password</span></button>
     </form>
   </div>
@@ -258,29 +250,28 @@
 
 <!-- ============================ DASHBOARD ============================ -->
 <div class="dashboard" id="screen-dashboard">
+  <div class="side-overlay hidden" id="sideOverlay"></div>
   <header class="dash-bar">
+    <button class="side-menu-btn" id="sideMenuBtn" aria-label="Open menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
     <div class="brand" onclick="switchTab('overview')"><div class="brand-mark">AC</div><span class="brand-text">Ahad Co</span></div>
     <nav class="dash-tabs">
-      <button class="dash-tab active" data-tab="overview">Overview</button>
-      <button class="dash-tab" data-tab="vault">Vault</button>
-      <button class="dash-tab" data-tab="cards">Cards</button>
-      <button class="dash-tab" data-tab="identities">IDs</button>
-      <button class="dash-tab" data-tab="contacts">Contacts</button>
-      <button class="dash-tab" data-tab="wifi">WiFi</button>
-      <button class="dash-tab" data-tab="servers">Servers</button>
-      <button class="dash-tab" data-tab="recovery">Seeds</button>
-      <button class="dash-tab" data-tab="code">Code</button>
-      <button class="dash-tab" data-tab="notes">Notes</button>
-      <button class="dash-tab" data-tab="bookmarks">Bookmarks</button>
-      <button class="dash-tab" data-tab="tasks">Tasks</button>
-      <button class="dash-tab" data-tab="profile">Profile</button>
+      <div class="tab-group">Create</div>
+      <button title="Overview" class="dash-tab active" data-tab="overview"><svg class="tab-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5"/></svg><span class="tab-tx">Overview</span></button>
+      <button title="Code Studio" class="dash-tab" data-tab="code"><svg class="tab-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 8l-4.5 4L9 16M15 8l4.5 4L15 16"/></svg><span class="tab-tx">Code</span></button>
+      <button title="RunSpace — free 24/7 hosting" class="dash-tab" data-tab="jobs"><svg class="tab-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg><span class="tab-tx">RunSpace</span></button>
+      <div class="tab-sep"></div>
+      <div class="tab-group">Account</div>
+      <button class="dash-tab dash-act tab-secondary" type="button" id="btnActivitySide" title="Activity"><svg class="tab-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 5 2 6.5 2 6.5H4S6 14 6 9"/><path d="M10.3 20a2 2 0 0 0 3.4 0"/></svg><span class="tab-tx">Activity</span></button>
+      <button title="Profile" class="dash-tab tab-secondary" data-tab="profile"><svg class="tab-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.3" r="3.4"/><path d="M5.5 19.6c1.2-3.3 3.7-5 6.5-5s5.3 1.7 6.5 5"/></svg><span class="tab-tx">Profile</span></button>
+      <button title="Admin console" class="dash-tab tab-secondary hidden" id="tabBtnAdmin" data-tab="admin"><svg class="tab-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 5 6v5.5c0 4.5 3 7.6 7 9 4-1.4 7-4.5 7-9V6z"/><path d="M9.2 11.8l2 2 3.6-4"/></svg><span class="tab-tx">Admin</span></button>
     </nav>
     <div class="dash-user">
-      <button class="icon-btn" id="cmdBtn" title="Search (Ctrl+K)"><span class="premium-emoji">🔍</span></button>
-      <button class="icon-btn" id="themeBtn" title="Toggle theme"><span class="premium-emoji" id="themeIcon">🌙</span></button>
+      <button class="icon-btn" id="cmdBtn" title="Search (Ctrl+K)"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></button>
+      <button class="icon-btn" id="themeBtn" title="Toggle theme"><span id="themeIcon"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5 5l1.8 1.8M17.2 17.2 19 19M5 19l1.8-1.8M17.2 6.8 19 5"/></svg></span></button>
       <span class="user-name" id="dashUsername">User</span>
       <button class="btn-ghost sm" id="btnLogout">Sign out</button>
     </div>
+    <button class="side-collapse" id="sideCollapse" aria-label="Collapse sidebar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg></button>
   </header>
 
   <main class="dash-main">
@@ -288,190 +279,38 @@
     <div class="dash-tab-content active" id="tab-overview">
       <div class="welcome">
         <div class="eyebrow">DASHBOARD</div>
-        <h1>Hello, <span id="dashUsername2">User</span> 👋</h1>
-        <p>Your vault is synced and secure.</p>
+        <h1>Hello, <span id="dashUsername2">User</span></h1>
+        <p>Everything is synced — pick a tool and go.</p>
+      </div>
+      <div class="feat-cards">
+        <button class="feat-card" onclick="switchTab('code')">
+          <span class="fc-ic"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 8l-4.5 4L9 16M15 8l4.5 4L15 16"/></svg></span>
+          <span class="fc-body"><b>Code Studio</b><small>Write &amp; run code in the browser — publish live pages with one tap.</small></span>
+          <span class="fc-go">→</span>
+        </button>
+        <button class="feat-card acc" onclick="switchTab('jobs')">
+          <span class="fc-ic"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg></span>
+          <span class="fc-body"><b>RunSpace <i>free hosting · 24/7</i></b><small>Deploy a Telegram bot, scraper or API — public URL, auto restarts, libraries install themselves.</small></span>
+          <span class="fc-go">→</span>
+        </button>
       </div>
       <div class="stats-grid">
-        <div class="stat-card" onclick="switchTab('vault')"><div class="stat-ic"><span class="premium-emoji">🔐</span></div><div><b id="statVault">0</b><span>Vault items</span></div></div>
-        <div class="stat-card" onclick="switchTab('cards')"><div class="stat-ic"><span class="premium-emoji">💳</span></div><div><b id="statCards">0</b><span>Cards</span></div></div>
-        <div class="stat-card" onclick="switchTab('notes')"><div class="stat-ic"><span class="premium-emoji">📝</span></div><div><b id="statNotes">0</b><span>Notes</span></div></div>
-        <div class="stat-card" onclick="switchTab('tasks')"><div class="stat-ic"><span class="premium-emoji">✅</span></div><div><b id="statTasks">0</b><span>Open tasks</span></div></div>
-        <div class="stat-card" onclick="switchTab('bookmarks')"><div class="stat-ic"><span class="premium-emoji">🔖</span></div><div><b id="statBookmarks">0</b><span>Bookmarks</span></div></div>
-        <div class="stat-card"><div class="stat-ic"><span class="premium-emoji">📅</span></div><div><b id="statDays">0</b><span>Days active</span></div></div>
+        <div class="stat-card" onclick="switchTab('jobs')"><div class="stat-ic"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg></div><div><b id="statJobs">0</b><span>Total apps</span></div></div>
+        <div class="stat-card" onclick="switchTab('jobs')"><div class="stat-ic"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5a13.5 13.5 0 0 1 0 17M12 3.5a13.5 13.5 0 0 0 0 17"/></svg></div><div><b id="statLive">0</b><span>Deployed 24/7</span></div></div>
+        <div class="stat-card" onclick="switchTab('code')"><div class="stat-ic"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 8l-4.5 4L9 16M15 8l4.5 4L15 16"/></svg></div><div><b id="statSnippets">0</b><span>Saved snippets</span></div></div>
+        <div class="stat-card" onclick="switchTab('code')"><div class="stat-ic"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="17.5" cy="5.5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="17.5" cy="18.5" r="2.5"/><path d="m8.2 10.8 6.8-4M8.2 13.2l6.8 4"/></svg></div><div><b id="statPublished">0</b><span>Published pages</span></div></div>
       </div>
       <div class="quick">
         <h2>Quick actions</h2>
         <div class="quick-grid">
-          <button class="quick-card" onclick="switchTab('vault')"><span class="qc-ic"><span class="premium-emoji">➕</span></span><span>Add to vault</span></button>
-          <button class="quick-card" onclick="switchTab('cards')"><span class="qc-ic"><span class="premium-emoji">💳</span></span><span>Add card</span></button>
-          <button class="quick-card" onclick="switchTab('notes')"><span class="qc-ic"><span class="premium-emoji">✨</span></span><span>New note</span></button>
-          <button class="quick-card" onclick="switchTab('tasks')"><span class="qc-ic"><span class="premium-emoji">✅</span></span><span>Add task</span></button>
+              <button class="quick-card" onclick="switchTab('code')"><span class="qc-ic"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 8l-4.5 4L9 16M15 8l4.5 4L15 16"/></svg></span><span>Code Studio</span></button>
+              <button class="quick-card" onclick="switchTab('jobs')"><span class="qc-ic"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg></span><span>Deploy 24/7</span></button>
+              <button class="quick-card" onclick="switchTab('code')"><span class="qc-ic"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="17.5" cy="5.5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="17.5" cy="18.5" r="2.5"/><path d="m8.2 10.8 6.8-4M8.2 13.2l6.8 4"/></svg></span><span>Publish a page</span></button>
+              <button class="quick-card" onclick="openActivityPanel()"><span class="qc-ic"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 5 2 6.5 2 6.5H4S6 14 6 9"/><path d="M10.3 20a2 2 0 0 0 3.4 0"/></svg></span><span>Activity log</span></button>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
 
-    <!-- VAULT -->
-    <div class="dash-tab-content" id="tab-vault">
-      <div class="tab-head"><div><div class="eyebrow">SECRETS</div><h2>Vault</h2></div><button class="btn-primary sm" id="btnAddVault">＋ Add new</button></div>
-      <div class="add-form hidden" id="vaultForm">
-        <div class="form-row">
-          <select id="vaultType" class="input-select">
-            <option value="phone">📱 Phone</option>
-            <option value="email">📧 Email</option>
-            <option value="code">🔑 Code</option>
-            <option value="link">🔗 Link</option>
-            <option value="note">📝 Note</option>
-            <option value="password">🔐 Password</option>
-            <option value="secret_file">📁 Secret file / note</option>
-          </select>
-          <input type="text" id="vaultLabel" class="input-text" placeholder="Label (e.g. Bank account)">
-        </div>
-        <textarea id="vaultValue" class="input-textarea" placeholder="Value / content…"></textarea>
-        <div class="form-actions">
-          <button class="btn-primary sm" onclick="saveVault()">💾 Save</button>
-          <button class="btn-ghost sm" onclick="hideVaultForm()">Cancel</button>
-        </div>
-      </div>
-      <div class="vault-list" id="vaultList"></div>
-    </div>
-
-    <!-- CARDS -->
-    <div class="dash-tab-content" id="tab-cards">
-      <div class="tab-head"><div><div class="eyebrow">PAYMENTS</div><h2>Cards</h2></div><button class="btn-primary sm" id="btnAddCard">＋ Add card</button></div>
-      <div class="add-form hidden" id="cardForm">
-        <input type="text" id="cardLabel" class="input-text" placeholder="Label (e.g. Nexus debit)">
-        <div class="form-row">
-          <input type="text" id="cardHolder" class="input-text" placeholder="Cardholder name">
-          <input type="text" id="cardBrand" class="input-text" placeholder="Brand (auto)">
-        </div>
-        <input type="text" id="cardNumber" class="input-text mono" placeholder="Card number" inputmode="numeric" maxlength="23">
-        <div class="form-row">
-          <input type="text" id="cardExpiry" class="input-text mono" placeholder="MM/YY" maxlength="5">
-          <input type="text" id="cardCvv" class="input-text mono" placeholder="CVV" inputmode="numeric" maxlength="4">
-        </div>
-        <div class="color-picker">
-          <span>Colour</span>
-          <button class="color-btn" data-card-color="#6366f1" style="background:#6366f1"></button>
-          <button class="color-btn" data-card-color="#0ea5e9" style="background:#0ea5e9"></button>
-          <button class="color-btn" data-card-color="#10b981" style="background:#10b981"></button>
-          <button class="color-btn" data-card-color="#f59e0b" style="background:#f59e0b"></button>
-          <button class="color-btn" data-card-color="#ef4444" style="background:#ef4444"></button>
-          <button class="color-btn" data-card-color="#1f2937" style="background:#1f2937"></button>
-        </div>
-        <textarea id="cardNote" class="input-textarea" placeholder="Note (optional)"></textarea>
-        <div class="form-actions">
-          <button class="btn-primary sm" onclick="saveCard()">💾 Save card</button>
-          <button class="btn-ghost sm" onclick="hideCardForm()">Cancel</button>
-        </div>
-      </div>
-      <div class="cards-grid" id="cardsList"></div>
-    </div>
-
-    <!-- IDENTITIES -->
-    <div class="dash-tab-content" id="tab-identities">
-      <div class="tab-head"><div><div class="eyebrow">DOCUMENTS</div><h2>Identities</h2></div><button class="btn-primary sm" id="btnAddIdentity">＋ Add ID</button></div>
-      <div class="add-form hidden" id="identityForm">
-        <div class="form-row">
-          <select id="identityType" class="input-select">
-            <option value="passport">🛂 Passport</option>
-            <option value="national_id">🪪 National ID</option>
-            <option value="license">🚗 Driver's licence</option>
-            <option value="address">🏠 Address</option>
-            <option value="tax">🧾 Tax / NID</option>
-            <option value="other">📄 Other</option>
-          </select>
-          <input type="text" id="identityLabel" class="input-text" placeholder="Label (e.g. Main passport)">
-        </div>
-        <textarea id="identityFields" class="input-textarea" placeholder="One field per line, e.g:&#10;Number: AB1234567&#10;Name: Ahad Rahman&#10;Expiry: 2030-01-01"></textarea>
-        <div class="form-actions">
-          <button class="btn-primary sm" onclick="saveIdentity()">💾 Save</button>
-          <button class="btn-ghost sm" onclick="hideIdentityForm()">Cancel</button>
-        </div>
-      </div>
-      <div class="vault-list" id="identitiesList"></div>
-    </div>
-
-    <!-- CONTACTS -->
-    <div class="dash-tab-content" id="tab-contacts">
-      <div class="tab-head"><div><div class="eyebrow">PEOPLE</div><h2>Contacts</h2></div><button class="btn-primary sm" id="btnAddContact">＋ Add contact</button></div>
-      <div class="add-form hidden" id="contactForm">
-        <div class="form-row">
-          <input type="text" id="contactName" class="input-text" placeholder="Full name">
-          <input type="text" id="contactCompany" class="input-text" placeholder="Company (optional)">
-        </div>
-        <div class="form-row">
-          <input type="email" id="contactEmail" class="input-text" placeholder="Email">
-          <input type="tel" id="contactPhone" class="input-text" placeholder="Phone">
-        </div>
-        <input type="text" id="contactAddress" class="input-text" placeholder="Address (optional)">
-        <textarea id="contactNote" class="input-textarea" placeholder="Note (optional)"></textarea>
-        <div class="form-actions">
-          <button class="btn-primary sm" onclick="saveContact()">💾 Save</button>
-          <button class="btn-ghost sm" onclick="hideContactForm()">Cancel</button>
-        </div>
-      </div>
-      <div class="vault-list" id="contactsList"></div>
-    </div>
-
-    <!-- WIFI -->
-    <div class="dash-tab-content" id="tab-wifi">
-      <div class="tab-head"><div><div class="eyebrow">NETWORKS</div><h2>WiFi</h2></div><button class="btn-primary sm" id="btnAddWifi">＋ Add WiFi</button></div>
-      <div class="add-form hidden" id="wifiForm">
-        <input type="text" id="wifiLabel" class="input-text" placeholder="Label (e.g. Home / Office)">
-        <input type="text" id="wifiSsid" class="input-text" placeholder="Network name (SSID)">
-        <input type="text" id="wifiPassword" class="input-text mono" placeholder="Password">
-        <div class="form-row">
-          <select id="wifiSecurity" class="input-select">
-            <option value="WPA">WPA/WPA2</option>
-            <option value="WEP">WEP</option>
-            <option value="nopass">None</option>
-          </select>
-          <input type="text" id="wifiLocation" class="input-text" placeholder="Location (optional)">
-        </div>
-        <div class="form-actions">
-          <button class="btn-primary sm" onclick="saveWifi()">💾 Save</button>
-          <button class="btn-ghost sm" onclick="hideWifiForm()">Cancel</button>
-        </div>
-      </div>
-      <div class="vault-list" id="wifiList"></div>
-    </div>
-
-    <!-- SERVERS -->
-    <div class="dash-tab-content" id="tab-servers">
-      <div class="tab-head"><div><div class="eyebrow">INFRA</div><h2>Servers</h2></div><button class="btn-primary sm" id="btnAddServer">＋ Add server</button></div>
-      <div class="add-form hidden" id="serverForm">
-        <input type="text" id="serverName" class="input-text" placeholder="Name (e.g. Prod web)">
-        <div class="form-row">
-          <input type="text" id="serverHost" class="input-text mono" placeholder="host or IP">
-          <input type="number" id="serverPort" class="input-text mono" placeholder="port" value="22">
-        </div>
-        <input type="text" id="serverUsername" class="input-text mono" placeholder="username">
-        <input type="text" id="serverPassword" class="input-text mono" placeholder="password (optional)">
-        <textarea id="serverNote" class="input-textarea" placeholder="Private key / note (optional)"></textarea>
-        <div class="form-actions">
-          <button class="btn-primary sm" onclick="saveServer()">💾 Save</button>
-          <button class="btn-ghost sm" onclick="hideServerForm()">Cancel</button>
-        </div>
-      </div>
-      <div class="vault-list" id="serversList"></div>
-    </div>
-
-    <!-- RECOVERY / SEEDS -->
-    <div class="dash-tab-content" id="tab-recovery">
-      <div class="tab-head"><div><div class="eyebrow">CRYPTO</div><h2>Recovery phrases</h2></div><button class="btn-primary sm" id="btnAddRecovery">＋ Add phrase</button></div>
-      <div class="add-form hidden" id="recoveryForm">
-        <input type="text" id="recoveryLabel" class="input-text" placeholder="Label (e.g. BTC wallet)">
-        <textarea id="recoveryWords" class="input-textarea tall" placeholder="Paste your 12 or 24-word seed phrase…"></textarea>
-        <div class="form-actions">
-          <button class="btn-primary sm" onclick="saveRecovery()">💾 Save</button>
-          <button class="btn-ghost sm" onclick="hideRecoveryForm()">Cancel</button>
-        </div>
-        <p class="auth-hint">⚠️ Store seed phrases only on devices you trust. Keep them offline where possible.</p>
-      </div>
-      <div class="vault-list" id="recoveryList"></div>
-    </div>
-
-    <!-- CODE STUDIO — entirely redesigned -->
     <div class="dash-tab-content code-studio" id="tab-code">
       <!-- Studio header bar -->
       <div class="cs-header">
@@ -498,8 +337,10 @@
           <option value="ruby">Ruby</option>
         </select>
         <div class="cs-actions">
+          <button class="cs-act" id="btnEditorFull" title="Fullscreen editor (Esc to exit)"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 3.5h-3a2 2 0 0 0-2 2v3M15.5 3.5h3a2 2 0 0 1 2 2v3M8.5 20.5h-3a2 2 0 0 1-2-2v-3M15.5 20.5h3a2 2 0 0 0 2-2v-3"/></svg></button>
           <button class="cs-act" id="btnNewSnippet" title="New">＋</button>
           <button class="cs-act" id="btnFormatSnippet" title="Format">Format</button>
+          <button class="cs-act run" id="btnRunCode" title="Run code in the terminal (Ctrl+Enter)"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5.2v13.6c0 .9 1 1.5 1.8 1L20 13a1.2 1.2 0 0 0 0-2L9.8 4.3A1.2 1.2 0 0 0 8 5.2z"/></svg> Run</button>
           <button class="cs-act" id="btnRunSnippet" title="Toggle preview">Preview</button>
           <button class="cs-act" id="btnShareSnippet" title="Publish standalone page">Publish</button>
           <button class="cs-act primary" id="btnSaveSnippet" title="Save">Save</button>
@@ -511,8 +352,9 @@
           <div class="cs-gutter" id="csGutter"></div>
           <textarea id="snippetContent" class="cs-code-input" placeholder="// Start coding here...
 // Type HTML, CSS, JS or Markdown — hit Preview to see it live
+// Pick Python/Go/C/Java... and hit ▶ Run — output appears in the terminal below
 // Hit Publish to deploy a standalone static page (like GitHub Pages)
-// Ctrl+Enter = preview · Ctrl+S = save · Tab = 2 spaces" spellcheck="false"></textarea>
+// Ctrl+Enter = run / preview · Ctrl+S = save · Tab = 2 spaces" spellcheck="false"></textarea>
         </div>
         <!-- Floating preview panel (slides in on demand) -->
         <div class="cs-preview-zone" id="idePreview">
@@ -526,6 +368,16 @@
           </div>
         </div>
       </div>
+      <!-- Integrated terminal (bottom panel — shows REAL runner output) -->
+      <div class="ah-term" id="ahTerm">
+        <div class="ah-term-head">
+          <span class="ah-dots"><i class="d-r"></i><i class="d-y"></i><i class="d-g"></i></span>
+          <span class="ah-term-title" id="ahTermTitle">user@ahad-co: ~</span>
+          <span class="ah-term-badge" id="ahTermBadge"></span>
+          <button class="ah-term-close" id="ahTermClose" title="Close terminal">✕</button>
+        </div>
+        <div class="ah-term-body" id="ahTermBody"></div>
+      </div>
       <!-- Saved projects strip -->
       <div class="cs-projects">
         <div class="cs-proj-head">
@@ -536,60 +388,54 @@
       </div>
     </div>
 
-    <!-- NOTES -->
-    <div class="dash-tab-content" id="tab-notes">
-      <div class="tab-head"><div><div class="eyebrow">JOURNAL</div><h2>Notes</h2></div><button class="btn-primary sm" id="btnAddNote">＋ New note</button></div>
-      <div class="add-form hidden" id="noteForm">
-        <input type="text" id="noteTitle" class="input-text" placeholder="Note title">
-        <textarea id="noteContent" class="input-textarea tall" placeholder="Write your note…"></textarea>
-        <div class="color-picker">
-          <span>Colour</span>
-          <button class="color-btn" data-color="#6366f1" style="background:#6366f1"></button>
-          <button class="color-btn" data-color="#22d3ee" style="background:#22d3ee"></button>
-          <button class="color-btn" data-color="#10b981" style="background:#10b981"></button>
-          <button class="color-btn" data-color="#f59e0b" style="background:#f59e0b"></button>
-          <button class="color-btn" data-color="#ef4444" style="background:#ef4444"></button>
-        </div>
-        <div class="form-actions">
-          <button class="btn-primary sm" onclick="saveNote()">💾 Save note</button>
-          <button class="btn-ghost sm" onclick="hideNoteForm()">Cancel</button>
-        </div>
+    <!-- RUNSPACE — free 24/7 hosting (Telegram bots, scrapers, APIs) -->
+    <div class="dash-tab-content" id="tab-jobs">
+      <div class="tab-head">
+        <div><div class="eyebrow">FREE HOSTING · 24/7</div><h2>RunSpace</h2></div>
       </div>
-      <div class="notes-grid" id="notesList"></div>
-    </div>
+      <p class="jobs-sub">Your Telegram bot, scraper, API or any loop — deployed in seconds and kept running day &amp; night, <b>free</b> (up to 3 apps). It restarts itself if it crashes. Open a web server on the <code>PORT</code> env variable (bind <code>0.0.0.0</code>) and a public <code>/live/…</code> URL appears under the app — copy &amp; share it.</p>
+      <p class="jobs-note">Libraries in your imports install by themselves · live URLs stay up while the app runs.</p>
 
-    <!-- BOOKMARKS -->
-    <div class="dash-tab-content" id="tab-bookmarks">
-      <div class="tab-head"><div><div class="eyebrow">LINKS</div><h2>Bookmarks</h2></div><button class="btn-primary sm" id="btnAddBookmark">＋ Add bookmark</button></div>
-      <div class="add-form hidden" id="bookmarkForm">
-        <input type="text" id="bookmarkTitle" class="input-text" placeholder="Website name">
-        <input type="url" id="bookmarkUrl" class="input-text" placeholder="https://example.com">
-        <input type="text" id="bookmarkDesc" class="input-text" placeholder="Description (optional)">
-        <div class="form-actions">
-          <button class="btn-primary sm" onclick="saveBookmark()">💾 Save bookmark</button>
-          <button class="btn-ghost sm" onclick="hideBookmarkForm()">Cancel</button>
+      <div class="job-form">
+        <div class="job-form-head">
+          DEPLOY PANEL
+          <span class="job-form-hint">Paste code · Ctrl+Enter deploys · web servers get a public URL</span>
         </div>
-      </div>
-      <div class="bookmarks-list" id="bookmarksList"></div>
-    </div>
-
-    <!-- TASKS -->
-    <div class="dash-tab-content" id="tab-tasks">
-      <div class="tab-head"><div><div class="eyebrow">TO-DO</div><h2>Tasks</h2></div></div>
-      <div class="add-form" id="taskForm">
-        <div class="form-row">
-          <input type="text" id="taskTitle" class="input-text" placeholder="Add a task and press Enter…">
-          <select id="taskPriority" class="input-select sm">
-            <option value="0">Normal</option>
-            <option value="1">High</option>
+        <div class="job-form-row">
+          <input type="text" id="jobName" class="input-text" placeholder="App name — e.g. my-tg-bot" maxlength="60">
+          <select id="jobLang" class="input-text job-lang">
+            <option value="python">python</option>
+            <option value="javascript">javascript</option>
+            <option value="bash">bash</option>
+            <option value="ruby">ruby</option>
+            <option value="php">php</option>
           </select>
-          <button class="btn-primary sm" onclick="addTask()">＋</button>
+        </div>
+        <textarea id="jobCode" class="input-textarea tall mono" spellcheck="false" placeholder="# Paste ANY code — a Telegram bot, a scraper, an API.
+# Imports (telegram, requests, bs4…) install BY THEMSELVES.
+# Press Deploy 24/7 — it stays online and restarts if it crashes.
+# Open a web server on 0.0.0.0:$PORT for a free public /live/… URL."></textarea>
+        <div class="form-actions">
+          <button class="btn-primary sm" id="btnStartJob">Deploy 24/7</button>
         </div>
       </div>
-      <div class="tasks-list" id="tasksList"></div>
+
+      <div class="jobs-list" id="jobsList"></div>
+
+      <div class="jobs-log" id="jobLogBox" style="display:none">
+        <div class="jobs-log-head">
+          <span id="jobLogTitle">logs</span>
+          <span class="jobs-log-actions">
+            <button class="jobs-log-btn" id="jobLogCopy" title="Copy full logs">⧉ Copy</button>
+            <button class="jobs-log-btn" id="jobLogFull" title="Full view">⤢ Full</button>
+            <button class="jobs-log-btn" id="jobLogRefresh" title="Refresh">⟳</button>
+            <button class="jobs-log-btn" id="jobLogClose" title="Close">✕</button>
+          </span>
+        </div>
+        <pre class="jobs-log-body" id="jobLogBody"></pre>
+      </div>
     </div>
 
-    <!-- PROFILE -->
     <div class="dash-tab-content" id="tab-profile">
       <div class="tab-head"><div><div class="eyebrow">SETTINGS</div><h2>Profile &amp; security</h2></div></div>
       <div class="profile-grid">
@@ -599,21 +445,92 @@
           <label class="field"><span>Email</span><input type="email" id="profileEmail" class="input-text" disabled></label>
           <label class="field"><span>Phone</span><input type="tel" id="profilePhone" class="input-text" placeholder="+880 1XXX XXXXXX"></label>
           <label class="field"><span>Custom code</span><input type="text" id="profileCode" class="input-text" placeholder="AHAD-001"></label>
-          <button class="btn-primary sm" onclick="saveProfile()">💾 Save changes</button>
+          <button class="btn-primary sm" onclick="saveProfile()">Save changes</button>
         </div>
-        <div class="profile-card">
-          <h3>Security &amp; activity</h3>
-          <button class="btn-secondary block left" onclick="showScreen('screen-forgot1')">🔄 Change password</button>
-          <button class="btn-secondary block left" id="btn2FA">📱 Set up 2FA</button>
-          <button class="btn-secondary block left" onclick="exportData()">📤 Export my data</button>
-          <button class="btn-secondary block left" onclick="showLoginHistory()">📜 View login history</button>
-          <button class="btn-ghost block left" onclick="openActivityPanel()">🔔 Recent activity</button>
+
+        <!-- Password -->
+        <div class="profile-card set-group">
+          <div class="set-row">
+            <div class="set-ic"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="14.5" r="4.5"/><path d="M11.2 11.3 19.5 3M15.8 6.7l3 3"/></svg></div>
+            <div class="set-tx">
+              <h3>Password</h3>
+              <p>Change the password you sign in with. Other devices are signed out automatically.</p>
+              <p class="set-meta" id="pwChangedAt">Last changed: —</p>
+            </div>
+          </div>
+          <button class="btn-secondary block left" onclick="openChangePassword()">Change password</button>
         </div>
+
+        <!-- Two-factor authentication -->
+        <div class="profile-card set-group">
+          <div class="set-row">
+            <div class="set-ic"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 5 6v5.5c0 4.5 3 7.6 7 9 4-1.4 7-4.5 7-9V6z"/><path d="M9.2 11.8l2 2 3.6-4"/></svg></div>
+            <div class="set-tx">
+              <h3>Two-factor authentication <span class="chip" id="tfaChip">—</span></h3>
+              <p>Require a 6-digit code from an authenticator app when signing in.</p>
+              <p class="set-meta" id="tfaMeta">Backup codes: —</p>
+            </div>
+          </div>
+          <button class="btn-secondary block left" id="btn2FA" onclick="manage2FA()">Manage 2FA</button>
+        </div>
+
+        <!-- Active sessions -->
+        <div class="profile-card set-group">
+          <div class="set-row">
+            <div class="set-ic"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="16" height="6.5" rx="1.5"/><path d="M8 7.3h.01M8 16.8h.01M12.5 7.3H17M12.5 16.8H17"/></svg></div>
+            <div class="set-tx">
+              <h3>Active sessions</h3>
+              <p>Devices currently signed in to your account. Revoke anything you don't recognise.</p>
+            </div>
+          </div>
+          <div class="sess-list" id="sessList"><div class="muted" style="font-size:13px">Loading…</div></div>
+        </div>
+
+        <!-- Recent activity -->
+        <div class="profile-card set-group">
+          <div class="set-row">
+            <div class="set-ic"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20.5h16"/><path d="M7 16.5v-4M12 16.5v-9M17 16.5v-6.5"/></svg></div>
+            <div class="set-tx">
+              <h3>Recent activity</h3>
+              <p>Sign-ins, OTP attempts and security events, newest first.</p>
+            </div>
+          </div>
+          <button class="btn-ghost block left" onclick="openActivityPanel()">Open activity log</button>
+        </div>
+
         <div class="profile-card danger">
           <h3>Danger zone</h3>
           <p class="muted">Permanently delete your account and all data.</p>
-          <button class="btn-danger block">🗑️ Delete account</button>
+          <button class="btn-danger block">Delete account</button>
         </div>
+      </div>
+    </div>
+    <!-- ADMIN CONSOLE (owner-only — the nav button stays hidden unless /profile says admin) -->
+    <div class="dash-tab-content" id="tab-admin">
+      <div class="tab-head">
+        <div><div class="eyebrow">OWNER CONSOLE</div><h2>Admin</h2></div>
+        <button class="btn-ghost sm" id="admRefresh" onclick="loadAdminPanel(true)">↻ Refresh</button>
+      </div>
+      <div class="adm-stats" id="admStats"></div>
+      <div class="adm-panel">
+        <div class="adm-panel-head"><h3>Signups · last 14 days</h3><span class="adm-hint" id="admCap"></span></div>
+        <div class="adm-spark" id="admSpark"></div>
+      </div>
+      <div class="adm-panel">
+        <div class="adm-panel-head"><h3>RunSpace apps</h3><span class="adm-hint">metadata only — code stays private</span></div>
+        <div class="adm-table-wrap"><table class="adm-table" id="admJobs"></table></div>
+      </div>
+      <div class="adm-panel">
+        <div class="adm-panel-head"><h3>Users</h3><span class="adm-hint">suspending needs your 2FA code</span></div>
+        <div class="adm-table-wrap"><table class="adm-table" id="admUsers"></table></div>
+      </div>
+      <div class="adm-panel">
+        <div class="adm-panel-head"><h3>Abuse reports</h3><span class="adm-hint">sent from the public report page</span></div>
+        <div class="adm-table-wrap"><table class="adm-table" id="admReports"></table></div>
+      </div>
+      <div class="adm-panel">
+        <div class="adm-panel-head"><h3>Audit log</h3><span class="adm-hint">every admin action, recorded</span></div>
+        <div class="adm-table-wrap"><table class="adm-table" id="admAudit"></table></div>
       </div>
     </div>
 
@@ -621,39 +538,22 @@
 
   <!-- ============ MOBILE BOTTOM NAV ============ -->
   <nav class="bottom-nav" id="bottomNav">
-    <button class="bn-item active" data-tab="overview"><span class="bn-ic"><span class="premium-emoji">⌂</span></span><span class="bn-l">Home</span></button>
-    <button class="bn-item" data-tab="vault"><span class="bn-ic"><span class="premium-emoji">🔐</span></span><span class="bn-l">Vault</span></button>
-    <button class="bn-item" id="bnSearch"><span class="bn-ic"><span class="premium-emoji">🔍</span></span><span class="bn-l">Search</span></button>
-    <button class="bn-item" data-tab="cards"><span class="bn-ic"><span class="premium-emoji">💳</span></span><span class="bn-l">Cards</span></button>
-    <button class="bn-item" data-tab="more" id="bnMore"><span class="bn-ic"><span class="premium-emoji">⋯</span></span><span class="bn-l">More</span></button>
+    <button class="bn-item active" data-tab="overview"><span class="bn-ic"><svg class="tab-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11 12 4l8 7"/><path d="M6 9.5V20h12V9.5"/></svg></span><span class="bn-l">Home</span></button>
+    <button class="bn-item" data-tab="code"><span class="bn-ic"><svg class="tab-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 8l-4.5 4L9 16M15 8l4.5 4L15 16"/></svg></span><span class="bn-l">Code</span></button>
+    <button class="bn-item" id="bnSearch"><span class="bn-ic"><svg class="tab-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></span><span class="bn-l">Search</span></button>
+    <button class="bn-item" data-tab="jobs"><span class="bn-ic"><svg class="tab-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg></span><span class="bn-l">RunSpace</span></button>
+    <button class="bn-item" data-tab="more" id="bnMore"><span class="bn-ic"><svg class="tab-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></span><span class="bn-l">Menu</span></button>
   </nav>
-  <div class="more-sheet hidden" id="moreSheet">
-    <div class="more-handle"></div>
-    <div class="more-grid">
-      <button class="more-item" onclick="switchTab('identities');closeMoreSheet()"><span class="premium-emoji">🪪</span><span>IDs</span></button>
-      <button class="more-item" onclick="switchTab('contacts');closeMoreSheet()"><span class="premium-emoji">👥</span><span>Contacts</span></button>
-      <button class="more-item" onclick="switchTab('wifi');closeMoreSheet()"><span class="premium-emoji">📶</span><span>WiFi</span></button>
-      <button class="more-item" onclick="switchTab('servers');closeMoreSheet()"><span class="premium-emoji">🖥️</span><span>Servers</span></button>
-      <button class="more-item" onclick="switchTab('recovery');closeMoreSheet()"><span class="premium-emoji">🌱</span><span>Seeds</span></button>
-      <button class="more-item" onclick="switchTab('code');closeMoreSheet()"><span class="premium-emoji">&lt;/&gt;</span><span>Code</span></button>
-      <button class="more-item" onclick="switchTab('notes');closeMoreSheet()"><span class="premium-emoji">📝</span><span>Notes</span></button>
-      <button class="more-item" onclick="switchTab('bookmarks');closeMoreSheet()"><span class="premium-emoji">🔖</span><span>Bookmarks</span></button>
-      <button class="more-item" onclick="switchTab('tasks');closeMoreSheet()"><span class="premium-emoji">✅</span><span>Tasks</span></button>
-      <button class="more-item" onclick="switchTab('profile');closeMoreSheet()"><span class="premium-emoji">👤</span><span>Profile</span></button>
-      <button class="more-item" onclick="openActivityPanel();closeMoreSheet()"><span class="premium-emoji">🔔</span><span>Activity</span></button>
-      <button class="more-item" id="bnTheme2" onclick="toggleTheme();"><span class="premium-emoji">🌙</span><span>Theme</span></button>
-      <button class="more-item danger" id="bnLogout" onclick="closeMoreSheet()"><span class="premium-emoji">🚪</span><span>Sign out</span></button>
-    </div>
-  </div>
-  <div class="more-overlay hidden" id="moreOverlay"></div>
+  <!-- (the old "more sheet" was removed — the left drawer is the ONE mobile menu;
+       two overlapping menus was the "mixed content" navigation bug) -->
 </div>
 
 <!-- ============ COMMAND PALETTE / SEARCH ============ -->
 <div class="cmd-overlay hidden" id="cmdOverlay">
   <div class="cmd-box">
     <div class="cmd-input-row">
-      <span>🔍</span>
-      <input type="text" id="cmdInput" placeholder="Search across your vault, cards, notes, contacts…" autocomplete="off">
+      <span class="cmd-lead"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></span>
+      <input type="text" id="cmdInput" placeholder="Search your snippets and apps…" autocomplete="off">
       <kbd>Esc</kbd>
     </div>
     <div class="cmd-results" id="cmdResults">
@@ -680,14 +580,64 @@
 <div class="activity-overlay hidden" id="activityOverlay"></div>
 
 <!-- TOAST -->
+<!-- ============ MODAL: 2FA SETUP WIZARD + MANAGE ============ -->
+<div class="ah-modal hidden" id="tfaModal">
+  <div class="ah-modal-card">
+    <div class="ah-modal-head">
+      <h3 id="tfaTitle">Two-factor authentication</h3>
+      <button class="ah-x" data-close>✕</button>
+    </div>
+    <div class="ah-steps" id="tfaSteps">
+      <span class="ah-dot" data-s="1"></span><span class="ah-dot" data-s="2"></span><span class="ah-dot" data-s="3"></span><span class="ah-dot" data-s="4"></span>
+    </div>
+    <div id="tfaBody"></div>
+  </div>
+</div>
+
+<!-- ============ MODAL: CHANGE PASSWORD (Settings) ============ -->
+<div class="ah-modal hidden" id="pwModal">
+  <div class="ah-modal-card">
+    <div class="ah-modal-head">
+      <h3>Change password</h3>
+      <button class="ah-x" data-close>✕</button>
+    </div>
+    <div id="pwBody">
+      <p class="auth-hint">Confirm it's you, then choose a new password. All other devices will be signed out.</p>
+      <label class="field"><span>Current password</span><input type="password" id="cp_current" class="input-text" autocomplete="current-password"></label>
+      <label class="field"><span>New password</span><input type="password" id="cp_new" class="input-text" autocomplete="new-password"></label>
+      <div class="strength"><div id="strengthFill4"></div></div>
+      <p class="strength-label" id="strengthLabel4"></p>
+      <label class="field"><span>Confirm new password</span><input type="password" id="cp_confirm" class="input-text" autocomplete="new-password"></label>
+      <label class="field hidden" id="cpTotpRow"><span>Authenticator code (2FA)</span><input type="text" id="cp_totp" class="input-text" inputmode="numeric" maxlength="6" placeholder="6-digit code"></label>
+      <button class="btn-primary block" id="cpSubmit" onclick="submitChangePassword()">Update password</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: ADMIN ACTION CONFIRM (own 2FA required) ============ -->
+<div class="ah-modal hidden" id="adminModal">
+  <div class="ah-modal-card">
+    <div class="ah-modal-head">
+      <h3 id="adminModalTitle">Confirm admin action</h3>
+      <button class="ah-x" data-close>✕</button>
+    </div>
+    <p class="auth-hint" id="adminModalText"></p>
+    <label class="field"><span>Your authenticator code (2FA)</span><input type="text" id="adminTfaCode" class="input-text" inputmode="numeric" maxlength="6" placeholder="6-digit code" autocomplete="one-time-code"></label>
+    <button class="btn-primary block" id="adminModalGo" onclick="confirmAdminAction()">Confirm</button>
+  </div>
+</div>
+
 <div class="toast-container" id="toastContainer"></div>
 
-<script src="/static/pro.js"></script>
+<script src="/static/pro.js?v=20260719g"></script>
 <script>
-  // Safety net: never leave the user stuck on the splash.
+  // Safety net: never leave the user stuck on the splash — remove the
+  // booting class AND hard-hide the splash element, whatever went wrong.
   setTimeout(function () {
     var h = document.documentElement;
     if (h.classList.contains('booting')) h.classList.remove('booting');
+    var s = document.getElementById('bootSplash');
+    if (s && !s.classList.contains('hidden')) { s.classList.add('hidden'); s.style.display = 'none'; }
   }, 4000);
 </script>
 </body>

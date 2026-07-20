@@ -21,7 +21,8 @@ from database import DIALECT  # noqa: E402
 assert DIALECT == "sqlite", f"Expected sqlite dialect, got {DIALECT}"
 
 # Mock email so signup/verify/reset flows don't need Brevo
-app.send_email = lambda *a, **k: None
+import services.email as _email_svc
+_email_svc.send_email = lambda *a, **k: None
 
 from fastapi.testclient import TestClient  # noqa: E402
 
@@ -44,12 +45,12 @@ r = client.get("/health")
 check(r.status_code == 200, "health 200")
 
 print("[2] signup")
-r = client.post("/signup", json={"username": USERNAME, "email": EMAIL, "password": PASSWORD})
+r = client.post("/signup", json={"username": USERNAME, "email": EMAIL, "password": PASSWORD, "agreed_terms": True})
 check(r.status_code == 200, f"signup 200 (got {r.status_code} {r.text})")
 
 # duplicate signup of an UNVERIFIED account now re-sends the OTP instead of
 # erroring (so users who lose the OTP page while checking mail can finish).
-r = client.post("/signup", json={"username": USERNAME, "email": "x@example.com", "password": PASSWORD})
+r = client.post("/signup", json={"username": USERNAME, "email": "x@example.com", "password": PASSWORD, "agreed_terms": True})
 check(r.status_code == 200 and r.json().get("resent") is True, "duplicate UNVERIFIED signup re-sends OTP")
 
 # read OTP straight from DB to verify
@@ -86,47 +87,45 @@ check(r.status_code == 200, "profile update")
 r = client.get("/profile", headers=auth)
 check(r.json()["phone"] == "+8801000000000", "phone persisted")
 
-print("[6] vault CRUD")
-r = client.post("/vault/add", headers=auth, json={"type": "password", "label": "github", "value": "hunter2"})
-check(r.status_code == 200 and "id" in r.json(), f"vault add returns id (got {r.text})")
-vid = r.json()["id"]
-r = client.get("/vault", headers=auth)
-check(len(r.json()["entries"]) == 1, "vault list has 1")
-r = client.post("/vault/update", headers=auth, json={"id": vid, "value": "newpass"})
-check(r.status_code == 200, "vault update")
-r = client.post("/vault/delete", headers=auth, json={"id": vid})
-check(r.status_code == 200, "vault delete")
+print("[6] removed vault-era endpoints are GONE (404 even when authed)")
+for dead in ("/vault", "/vault/add", "/vault/update", "/vault/delete",
+             "/notes", "/bookmarks", "/categories", "/api-keys",
+             "/notifications", "/export-data", "/generate-password", "/qr"):
+    r = client.get(dead, headers=auth)
+    check(r.status_code == 404, f"GET {dead} -> 404")
+    r = client.post(dead, headers=auth, json={})
+    check(r.status_code == 404, f"POST {dead} -> 404")
 
-print("[7] notes CRUD")
-r = client.post("/notes", headers=auth, json={"title": "My Note", "content": "hello world"})
-check("id" in r.json(), "note create returns id")
-nid = r.json()["id"]
-r = client.put("/notes", headers=auth, json={"id": nid, "pinned": True})
-check(r.status_code == 200, "note update/pin")
-r = client.get("/notes", headers=auth)
-check(len(r.json()["notes"]) == 1 and r.json()["notes"][0]["pinned"] == 1, "note pinned persisted")
-r = client.request("DELETE", "/notes", headers=auth, json={"id": nid})
-check(r.status_code == 200, "note delete")
+print("[7] snippets CRUD + publish (Code Editor — kept feature)")
+r = client.post("/snippets", headers=auth, json={"title": "hello.py", "language": "python", "content": "print('hi')"})
+check("id" in r.json(), "snippet create returns id")
+sid = r.json()["id"]
+r = client.put("/snippets", headers=auth, json={"id": sid, "title": "hello v2"})
+check(r.status_code == 200, "snippet update")
+r = client.get("/snippets", headers=auth)
+check(len(r.json()["snippets"]) == 1, "snippet list has 1")
+r = client.post("/snippets/share", headers=auth, json={"id": sid, "share": True})
+check(r.status_code == 200 and r.json().get("token"), "snippet publish returns token")
+token = r.json()["token"]
+r = client.get(f"/s/{token}")
+check(r.status_code == 200, "public published page loads (no auth)")
+r = client.post("/snippets/share", headers=auth, json={"id": sid, "share": False})
+check(r.status_code == 200, "snippet unpublish")
+r = client.get(f"/s/{token}")
+check(r.status_code == 404, "unpublished page now 404s")
+r = client.request("DELETE", "/snippets", headers=auth, json={"id": sid})
+check(r.status_code == 200, "snippet delete")
 
-print("[8] bookmarks CRUD")
-r = client.post("/bookmarks", headers=auth, json={"title": "Supabase", "url": "https://supabase.com"})
-check("id" in r.json(), "bookmark create returns id")
-bid = r.json()["id"]
-r = client.put("/bookmarks", headers=auth, json={"id": bid, "category": "dev"})
-check(r.status_code == 200, "bookmark update")
-r = client.get("/bookmarks", headers=auth)
-check(len(r.json()["bookmarks"]) == 1, "bookmark list")
-r = client.request("DELETE", "/bookmarks", headers=auth, json={"id": bid})
-check(r.status_code == 200, "bookmark delete")
+print("[8] RunSpace — embedded engine executes in-process (single service)")
+r = client.post("/api/execute", headers=auth, json={"language": "python", "code": "print(6*7)"})
+check(r.status_code == 200 and "42" in (r.json().get("stdout") or ""), "execute -> real stdout via embedded runner")
+r = client.get("/api/jobs", headers=auth)
+check(r.status_code == 200 and r.json().get("max_per_user") == 3, "jobs list + per-user cap surfaced")
 
-print("[9] categories CRUD")
-r = client.post("/categories", headers=auth, json={"name": "Work", "icon": "💼"})
-check("id" in r.json(), "category create returns id")
-cid = r.json()["id"]
-r = client.put("/categories", headers=auth, json={"id": cid, "color": "#ff0000"})
-check(r.status_code == 200, "category update")
-r = client.request("DELETE", "/categories", headers=auth, json={"id": cid})
-check(r.status_code == 200, "category delete")
+print("[9] global search (kept feature)")
+client.post("/snippets", headers=auth, json={"title": "needle-script", "language": "python", "content": "x = 1"})
+r = client.get("/search?q=needle", headers=auth)
+check(r.status_code == 200 and any(x["kind"] == "snippet" for x in r.json()["results"]), "search finds snippet")
 
 print("[10] preferences")
 r = client.get("/preferences", headers=auth)
@@ -136,26 +135,18 @@ check(r.status_code == 200, "preferences update")
 r = client.get("/preferences", headers=auth)
 check(r.json()["theme"] == "light", "preferences persisted")
 
-print("[11] api keys")
-r = client.post("/api-keys", headers=auth, json={"name": "ci"})
-check("key" in r.json() and "id" in r.json(), "api key create")
-kid = r.json()["id"]
-r = client.get("/api-keys", headers=auth)
-check(len(r.json()["keys"]) == 1, "api key list")
-r = client.post("/api-keys/revoke", headers=auth, json={"key_id": kid})
-check(r.status_code == 200, "api key revoke")
+print("[11] dashboard stats (hosting product numbers, not vault counts)")
+r = client.get("/stats", headers=auth)
+check(r.status_code == 200, "stats 200")
+body = r.json()
+check("jobs_total" in body and "snippets" in body and "published" in body, "stats has hosting fields")
+check("active_sessions" in body and body["active_sessions"] >= 1, "stats returns session count")
 
-print("[12] notifications + activity-log + stats + export")
+print("[12] activity-log")
 r = client.post("/activity-log", headers=auth, json={"action": "test_action", "details": "ci"})
 check(r.status_code == 200, "activity log add")
 r = client.get("/activity-log", headers=auth)
-check(len(r.json()["activities"]) == 1, "activity log list")
-r = client.get("/notifications", headers=auth)
-check(r.status_code == 200, "notifications list")
-r = client.get("/stats", headers=auth)
-check(r.json()["active_sessions"] >= 1, "stats returns session count")
-r = client.get("/export-data", headers=auth)
-check(r.status_code == 200 and r.json()["user"]["username"] == USERNAME, "export-data")
+check(any(a["action"] == "test_action" for a in r.json().get("activities", r.json() if isinstance(r.json(), list) else [])), "activity log list contains new entry")
 
 print("[13] sessions")
 r = client.get("/sessions", headers=auth)
@@ -172,11 +163,20 @@ r = client.post("/2fa/verify-setup", headers=auth, json={"code": code})
 check(r.status_code == 200, f"2fa verify-setup (got {r.status_code} {r.text})")
 r = client.get("/2fa/status", headers=auth)
 check(r.json()["enabled"] is True, "2fa status enabled")
-# run setup again (upsert path: INSERT OR REPLACE / ON CONFLICT)
+# run setup again (upsert path: INSERT OR REPLACE / ON CONFLICT) — a re-setup
+# rotates the secret and returns 2FA to the pending state until re-verified
 r = client.post("/2fa/setup", headers=auth, json={"enable": True})
 check(r.status_code == 200, "2fa re-setup (upsert) works")
+secret2 = r.json()["secret"]
+r = client.post("/2fa/verify-setup", headers=auth, json={"code": pyotp.TOTP(secret2).now()})
+check(r.status_code == 200, "2fa re-verify after rotation")
+# one-click disable must NOT work — it requires password + a current code
 r = client.post("/2fa/setup", headers=auth, json={"enable": False})
-check(r.status_code == 200, "2fa disable")
+check(r.status_code == 400, "setup(enable=False) refused without confirmations")
+r = client.post("/2fa/disable", headers=auth, json={"password": PASSWORD, "code": pyotp.TOTP(secret2).now()})
+check(r.status_code == 200, f"2fa disable via /2fa/disable (got {r.status_code} {r.text})")
+r = client.get("/2fa/status", headers=auth)
+check(r.json()["enabled"] is False, "2fa status disabled")
 
 print("[15] logout + invalid token")
 r = client.post("/logout", headers=auth)

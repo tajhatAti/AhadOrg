@@ -1,53 +1,44 @@
-# render.yaml - Render Auto-Deploy Configuration
+# render.yaml — Render Auto-Deploy Configuration
 # ==============================================
-# এই ফাইল Render.com এ auto-deploy সেটআপ করে
-# ==============================================
+# 🚀 SINGLE-SERVICE DEPLOY (default): ONE web service runs everything —
+#    the site, the in-process job runner, and the public /live/{slug}/
+#    gateway. It needs the Docker image (language toolchains for user jobs),
+#    so `runtime: docker` + the repo-root Dockerfile are mandatory.
+#
+#    Embedded mode activates automatically: as long as RUNNER_SERVICE_URL is
+#    NOT set, jobs spawn inside this process. (Want the old two-service
+#    layout instead? Deploy runner/ as its own service and set
+#    RUNNER_SERVICE_URL + RUNNER_SERVICE_SECRET here — the app switches.)
 #
 # 📌 PERMANENT DATA with Supabase (PostgreSQL free tier):
-#    Create a free Supabase project, copy its "Connection string" (Session pooler,
-#    port 5432), and add DATABASE_URL as an environment variable in the Render
-#    dashboard. When DATABASE_URL is set, the app uses PostgreSQL and data is
-#    permanent — no persistent disk needed.
-#
-#    (If DATABASE_URL is left unset, the app falls back to a SQLite file on disk.)
+#    Supabase Dashboard → Project Settings → Database → Connection string
+#    (Session pooler, port 5432) → paste as DATABASE_URL below in the Render
+#    dashboard. With DATABASE_URL set, data is permanent — no disk needed.
 
 services:
   - type: web
     name: ahad-co-auth
-    runtime: python
-    region: singapore
+    runtime: docker                    # root Dockerfile = web + embedded runner
+    dockerfilePath: ./Dockerfile
     plan: free
+    region: singapore
+    autoDeploy: true                   # deploys on every push to main
 
-    # Auto deploy from main branch
-    autoDeploy: true
-
-    # Build settings
-    buildCommand: |
-      pip install -r requirements.txt
-    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
-
-    # Environment variables (Production এ Render Dashboard এ set করুন)
     envVars:
-      - key: DATABASE_URL
-        # ⚠️ REQUIRED for permanent data.
-        # Supabase Dashboard -> Project Settings -> Database -> Connection string
-        # Example: postgresql://postgres.xxxx:PASSWORD@aws-0-region.pooler.supabase.com:5432/postgres
-        # Leave unset to use local SQLite instead (data lost on redeploy).
+      - key: DATABASE_URL              # ⚠️ REQUIRED for permanent data (Supabase)
         sync: false
 
-      - key: DB_PATH
-        # Only used when DATABASE_URL is unset (SQLite fallback)
-        value: /data/database.db
+      - key: SITE_BASE_URL             # this service's own public URL — used to
+        sync: false                    # build job URLs: {SITE_BASE_URL}/live/{slug}/
+                                       # e.g. https://ahad-co-auth.onrender.com
 
-      - key: PG_SSLMODE
-        value: prefer
+      - key: ADMIN_EMAILS              # comma-separated owner emails → is_admin
+        sync: false                    # granted automatically at login
 
-      - key: BREVO_API_KEY
-        # ⚠️ Render Dashboard > Environment > Add Environment Variable
+      - key: BREVO_API_KEY             # OTP email delivery
         sync: false
 
       - key: SENDER_EMAIL
-        # ⚠️ Render Dashboard > Environment > Add Environment Variable
         sync: false
 
       - key: SENDER_NAME
@@ -56,21 +47,15 @@ services:
       - key: OTP_EXPIRY_MINUTES
         value: "10"
 
-      - key: PYTHON_VERSION
-        value: "3.11"
+      - key: PG_SSLMODE
+        value: prefer
 
-    # Persistent disk — only needed if you use the SQLite fallback (DATABASE_URL
-    # unset). With Supabase/PostgreSQL you can safely remove this block.
-    disk:
-      name: ahad-data
-      mountPath: /data
-      sizeGB: 1
+      # ── intentionally UNSET: RUNNER_SERVICE_URL / RUNNER_SERVICE_SECRET ──
+      # (leaving them unset is what turns the embedded runner ON)
 
-# Health check
-healthCheckPath: /health
+    # Health check
+    healthCheckPath: /health
 
-# Cron jobs (optional - database backup)
-# cron:
-#   - name: "Database Backup"
-#     schedule: "0 2 * * *"
-#     command: "cp /data/database.db /data/backup-$(date +%Y%m%d).db && ls -lh /data/"
+# Two-service layout (optional, not needed by default):
+#   deploy runner/ with runner/Dockerfile as a second web service,
+#   then set RUNNER_SERVICE_URL + RUNNER_SERVICE_SECRET on this one.

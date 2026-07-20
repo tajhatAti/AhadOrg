@@ -34,3 +34,29 @@ on Render's free tier). For maximum isolation (network namespace, fork
 limits, etc.), consider swapping the execution backend to self-hosted
 [Piston](https://github.com/engineer-man/piston) which uses Linux `isolate`.
 The API contract (`/internal/execute`) is compatible.
+
+## Public job URLs (web services)
+
+Jobs that bind a listening socket get a public URL automatically:
+
+```
+https://<runner-host>/live/{job-slug}/  →  http://127.0.0.1:{job port}/
+```
+
+* Every job is handed a `PORT` env var (pool 11000–11099) — code should bind
+  `0.0.0.0` + that port (Flask/Express/FastAPI all read `PORT` already).
+* A watchdog detects the listener; the dashboard then shows the URL with
+  Copy / Open buttons. Slug + port belong to the job record, so crash
+  auto-restarts keep the same address.
+* HTTP **and** WebSocket traffic is proxied; root-absolute redirects are
+  rewritten so the `/live/{slug}` prefix survives.
+* Per-URL rate limit: 60 req/min/IP (`LIVE_RATE_LIMIT`). Private mode needs
+  the owner's `?key=` / `X-Access-Key:` access key
+  (`POST /internal/jobs/{id}/access` toggles it).
+
+Env (optional):
+
+* `PUBLIC_BASE_URL` — used only to print pretty URLs in the job log
+  (e.g. `https://ahad-code-runner.onrender.com`).
+* `LIVE_PORT_MIN` / `LIVE_PORT_MAX` — port pool (default 11000–11099).
+* `LIVE_RATE_LIMIT` — default 60 req/min/IP.

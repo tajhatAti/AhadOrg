@@ -4,7 +4,10 @@
 # Installs common language runtimes, then runs the FastAPI runner.
 # ============================================================
 
-FROM python:3.11-slim
+# Pin to Debian 12 (bookworm): the floating `python:3.11-slim` tag now points
+# to Debian 13 (trixie), which removed the `openjdk-17-jdk-headless` package
+# and breaks the build. Bookworm still ships OpenJDK 17.
+FROM python:3.11-slim-bookworm
 
 # Install system packages + language runtimes
 RUN apt-get update && apt-get install -y --no-install-recommends \
