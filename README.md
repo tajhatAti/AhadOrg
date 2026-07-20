@@ -126,6 +126,22 @@ runs in a single transaction and rolls back on any error, so it is safe to re-ru
 5. Add environment variables from Render Dashboard
 6. Enable Persistent Disk for `/data`
 
+### Preventing Render Free Tier Spin-Down (Uptime & Reliability)
+
+Render's free tier web services automatically spin down after 15 minutes of no external/internal HTTP traffic, causing a ~30–60s cold start on the next request. To ensure seamless uptime, Ahad Co includes built-in mitigations and recommends an external guard:
+
+1. **Built-in Self-Ping Mechanism**: 
+   The app runs a background asyncio scheduled task that sends a lightweight HTTP GET request to its own `/health` endpoint every 10–14 minutes. This keeps the service from ever going fully idle long enough to spin down.
+2. **RunSpace Proxy Retry-with-Backoff**: 
+   When requests hit a RunSpace job URL after an idle period, the proxy layer automatically retries up to 3 times with short delays (2s, 4s, 8s) if the initial request fails or times out, smoothing over brief cold-start windows without requiring manual page refreshes.
+3. **Clear Status Messaging**: 
+   During a cold-start window, users see a clear, informative status message (`"Waking up your RunSpace... this can take up to a minute on the free tier"`) instead of a raw error.
+
+#### Is Self-Ping Sufficient, or Should You Also Set Up an External Ping Service?
+* **Self-Ping is highly effective** for preventing idle spin-downs under normal container operation.
+* **External Ping (Recommended Second Layer)**: We recommend also setting up a free external ping service (such as **UptimeRobot**, which was used earlier in this project) configured to ping `https://<your-app>.onrender.com/health` every 5–10 minutes.
+* **Conclusion**: For the most consistent, bulletproof 24/7 uptime on the free tier, **use both** the built-in self-ping mechanism and an external UptimeRobot monitor.
+
 ## Deploy to Friendhost/FriendsHost
 
 ```bash

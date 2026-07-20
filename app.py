@@ -26,6 +26,39 @@ STATIC_DIR = BASE_DIR / "static"
 app = FastAPI(title="Ahad Co — RunSpace")
 
 
+import asyncio
+import random
+import httpx
+
+async def _self_ping_loop():
+    """Background scheduled task: sends a lightweight HTTP GET to the app's own
+    /health endpoint every 10-14 minutes to prevent Render free tier web service
+    from spinning down after 15 minutes of inactivity."""
+    await asyncio.sleep(60)
+    while True:
+        try:
+            port = os.getenv("PORT", "8000")
+            base = (
+                os.getenv("RENDER_EXTERNAL_URL", "").strip()
+                or os.getenv("SITE_BASE_URL", "").strip()
+                or os.getenv("PUBLIC_BASE_URL", "").strip()
+                or f"http://127.0.0.1:{port}"
+            ).rstrip("/")
+            url = f"{base}/health"
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.get(url)
+                logger.info("Self-ping to %s returned status %s", url, resp.status_code)
+        except Exception as exc:
+            logger.warning("Self-ping failed: %s", exc)
+        
+        delay = random.uniform(600, 840)
+        await asyncio.sleep(delay)
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(_self_ping_loop())
+
+
 def _enable_embedded_runner() -> bool:
     """Single-service mode: when RUNNER_SERVICE_URL is NOT set, the job runner
     lives inside THIS process (one Render web service — the whole point of the

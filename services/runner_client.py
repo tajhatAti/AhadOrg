@@ -94,9 +94,9 @@ def _runner_http(method: str, path: str, json_body=None):
             timeout=20,
         )
     except requests.ConnectionError:
-        raise HTTPException(status_code=503, detail="Job service is waking up or unreachable — try again in 30 seconds.")
+        raise HTTPException(status_code=503, detail="Waking up your RunSpace... this can take up to a minute on the free tier.")
     except requests.Timeout:
-        raise HTTPException(status_code=504, detail="Job service took too long to respond.")
+        raise HTTPException(status_code=504, detail="Waking up your RunSpace... this can take up to a minute on the free tier.")
 
 
 def _job_web_fields(info: dict) -> dict:
