@@ -273,8 +273,11 @@ async function main() {
   check("Code tab active", $("#tab-code").classList.contains("active"));
   check("URL pushed to /code", window.location.pathname === "/code", window.location.pathname);
   check("editor title input", !!$("#snippetTitle"));
-  check("editor code area", !!$("#snippetContent"));
+  check("editor code area / CodeMirror", !!$("#snippetContent"));
   check("editor language select", !!$("#snippetLanguage"));
+  check("RunSpace terminal panel (#ahTerm)", !!$("#ahTerm"));
+  check("RunSpace save button (#btnSaveSnippet)", !!$("#btnSaveSnippet"));
+  check("RunSpace run button (#btnRunCode)", !!$("#btnRunCode"));
 
   $("#snippetTitle").value = "e2e-demo-page";
   $("#snippetLanguage").value = "html";

@@ -87,6 +87,7 @@ function switchTab(tabId) {
   if (tabId === "admin" && typeof loadAdminPanel === "function") { loadAdminPanel(); }
   // ⚙️ Settings: keep the security panel truthful every time it opens.
   if (tabId === "profile") { refreshSecurityPanel(); loadSessionsList(); }
+  if (tabId === "code") { initCodeMirror(); if (cmEditor) cmEditor.refresh(); }
   // 🔗 Every section is a REAL URL — back/forward + refresh + sharing work.
   if (!_routeNav) {
     const p = TAB_PATHS[tabId];
@@ -956,22 +957,76 @@ function toggleEditorFullscreen() {
   if (c.classList.contains("full")) exitEditorFullscreen(); else enterEditorFullscreen();
 }
 
+let cmEditor = null;
+function initCodeMirror() {
+  const ta = document.getElementById("snippetContent");
+  if (!ta || typeof CodeMirror === "undefined") return;
+  if (cmEditor) return;
+  cmEditor = CodeMirror.fromTextArea(ta, {
+    lineNumbers: true,
+    theme: "default",
+    mode: "python",
+    lineWrapping: true,
+    indentUnit: 2,
+    tabSize: 2,
+    extraKeys: {
+      "Ctrl-S": function(cm) { saveSnippet(); },
+      "Cmd-S": function(cm) { saveSnippet(); },
+      "Ctrl-Enter": function(cm) {
+        const curLang = (document.getElementById("snippetLanguage").value || "").toLowerCase();
+        if (_RUNNABLE_LANGS[curLang]) { runLivePreview(); } else { executeCode(); }
+      },
+      "Cmd-Enter": function(cm) {
+        const curLang = (document.getElementById("snippetLanguage").value || "").toLowerCase();
+        if (_RUNNABLE_LANGS[curLang]) { runLivePreview(); } else { executeCode(); }
+      }
+    }
+  });
+  cmEditor.on("change", (cm) => {
+    ta.value = cm.getValue();
+    updateEditorMeta();
+    clearTimeout(_livePreviewTimer);
+    const l = (document.getElementById("snippetLanguage").value || "").toLowerCase();
+    if (_RUNNABLE_LANGS[l]) _livePreviewTimer = setTimeout(runLivePreview, 400);
+  });
+  updateCodeMirrorMode();
+}
+
+function updateCodeMirrorMode() {
+  if (!cmEditor || typeof CodeMirror === "undefined") return;
+  const lang = (document.getElementById("snippetLanguage").value || "text").toLowerCase();
+  let mode = "text/plain";
+  if (lang === "python" || lang === "python3") mode = "python";
+  else if (lang === "javascript" || lang === "js") mode = "javascript";
+  else if (lang === "html") mode = "htmlmixed";
+  else if (lang === "css") mode = "css";
+  else if (lang === "markdown" || lang === "md") mode = "markdown";
+  else if (lang === "bash" || lang === "sh") mode = "shell";
+  else if (lang === "c" || lang === "cpp" || lang === "c++") mode = "text/x-csrc";
+  else if (lang === "java") mode = "text/x-java";
+  else if (lang === "sql") mode = "sql";
+  cmEditor.setOption("mode", mode);
+}
+
 function newSnippetDraft(quiet) {
   editingSnippetId = null;
   document.getElementById("snippetTitle").value = "";
-  const ta = document.getElementById("snippetContent"); ta.value = "";
+  const ta = document.getElementById("snippetContent");
+  ta.value = "";
+  if (cmEditor) cmEditor.setValue("");
   document.getElementById("snippetLanguage").value = "html";
+  updateCodeMirrorMode();
   updateEditorMeta();
   syncRunPreviewButtons();
   runLivePreview();
-  ta.focus();
+  if (cmEditor) cmEditor.focus(); else ta.focus();
   if (!quiet) toast("New snippet — write something and press Run", "info");
 }
 
 async function saveSnippet(keepEditor) {
   const title = document.getElementById("snippetTitle").value.trim();
   const language = document.getElementById("snippetLanguage").value;
-  const content = document.getElementById("snippetContent").value;
+  const content = cmEditor ? cmEditor.getValue() : document.getElementById("snippetContent").value;
   if (!content.trim()) { toast("Snippet content cannot be empty!", "error"); return; }
   try {
     let savedId = editingSnippetId;
@@ -992,8 +1047,9 @@ function updateEditorMeta() {
   const ta = document.getElementById("snippetContent");
   const meta = document.getElementById("editorMeta");
   if (!ta || !meta) return;
-  const lines = ta.value.split("\n").length;
-  meta.textContent = lines + " lines · " + ta.value.length + " chars";
+  const val = cmEditor ? cmEditor.getValue() : (ta.value || "");
+  const lines = val.split("\n").length;
+  meta.textContent = lines + " lines · " + val.length + " chars";
   updateGutter();
 }
 
@@ -1025,7 +1081,7 @@ function btoaSafe(str) {
 
 function runLivePreview() {
   const lang = document.getElementById("snippetLanguage").value;
-  const content = document.getElementById("snippetContent").value;
+  const content = cmEditor ? cmEditor.getValue() : document.getElementById("snippetContent").value;
   const frame = document.getElementById("livePreview");
   const pmeta = document.getElementById("previewMeta");
   if (!frame) return;
@@ -1062,7 +1118,7 @@ window.addEventListener("message", function (ev) {
 function formatSnippet() {
   const ta = document.getElementById("snippetContent");
   const lang = document.getElementById("snippetLanguage").value;
-  const orig = ta.value;
+  const orig = cmEditor ? cmEditor.getValue() : ta.value;
   let out = orig;
   try {
     if (lang === "json") { out = JSON.stringify(JSON.parse(orig), null, 2); }
@@ -1070,6 +1126,7 @@ function formatSnippet() {
     else if (lang === "css") { out = _formatCSS(orig); }
     else { out = orig.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim() + "\n"; }
     ta.value = out;
+    if (cmEditor) cmEditor.setValue(out);
     updateEditorMeta();
     runLivePreview();
     toast("Formatted", "success");
@@ -1119,7 +1176,10 @@ async function loadSnippetIntoEditor(id) {
     editingSnippetId = id;
     document.getElementById("snippetTitle").value = s.title || "";
     document.getElementById("snippetLanguage").value = s.language || "text";
-    document.getElementById("snippetContent").value = s.content || "";
+    const val = s.content || "";
+    document.getElementById("snippetContent").value = val;
+    if (cmEditor) cmEditor.setValue(val);
+    updateCodeMirrorMode();
     updateEditorMeta();
     runLivePreview();
     toast("Loaded into editor", "info");
@@ -1278,7 +1338,7 @@ function _termTitle(lang) {
 /* Execute code on the backend runner service — real output, not preview. */
 async function executeCode() {
   const lang = document.getElementById("snippetLanguage").value;
-  const code = document.getElementById("snippetContent").value;
+  const code = cmEditor ? cmEditor.getValue() : document.getElementById("snippetContent").value;
   if (!code.trim()) { toast("Nothing to run!", "error"); return; }
 
   _termOpen(); _termClear(); _termTitle(lang); _termBadge("running…");
@@ -2004,7 +2064,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
   const snippetLanguage = document.getElementById("snippetLanguage");
-  if (snippetLanguage) snippetLanguage.addEventListener("change", () => { syncRunPreviewButtons(); runLivePreview(); });
+  if (snippetLanguage) snippetLanguage.addEventListener("change", () => { updateCodeMirrorMode(); syncRunPreviewButtons(); runLivePreview(); });
+  try { initCodeMirror(); } catch (e) { console.error("initCodeMirror:", e); }
   // These editor helpers must never block the wiring of the REST of the app.
   try { syncRunPreviewButtons(); } catch (e) { console.error("syncRunPreviewButtons:", e); }
   try { initIdeDivider(); } catch (e) { console.error("initIdeDivider:", e); }
