@@ -273,7 +273,7 @@ async function api(path, method = "POST", body = null, auth = false) {
     // a user error. Banner (not 11 racing toasts) + marked error kind so the
     // dashboard keeps the session and retries instead of logging you out.
     _serverDown();
-    const e = new Error("Server unreachable — it may be waking up (~30-60s on the free plan). Please wait…");
+    const e = new Error("Waking up your RunSpace... this can take up to a minute on the free tier");
     e.kind = "infra";
     throw e;
   }
@@ -319,7 +319,7 @@ function _serverDown() {
     document.body.appendChild(b);
     b.addEventListener("click", () => window.location.reload());
   }
-  b.innerHTML = `${ic("refresh")}<span>Server is waking up — please wait ~30-60s (free plan). The page retries by itself…</span>`;
+  b.innerHTML = `${ic("refresh")}<span>Waking up your RunSpace... this can take up to a minute on the free tier. Please wait...</span>`;
   requestAnimationFrame(() => b.classList.add("show"));
 }
 function _serverUp() {

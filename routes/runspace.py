@@ -168,7 +168,7 @@ def list_jobs(authorization: Optional[str] = Header(None)):
         if resp.status_code == 200:
             live = {j["id"]: j for j in resp.json().get("jobs", [])}
         else:
-            runner_state = "unreachable"
+            runner_state = "Waking up your RunSpace... this can take up to a minute on the free tier"
     except HTTPException as e:
         runner_state = e.detail
 
@@ -241,7 +241,7 @@ async def job_logs_stream(job_id: int, token: Optional[str] = None):
                     info = None
             payload = {
                 "status": (info or {}).get("status", "offline"),
-                "logs": (info or {}).get("logs", "(runner unreachable — retrying…)"),
+                "logs": (info or {}).get("logs", "(Waking up your RunSpace... this can take up to a minute on the free tier)"),
                 "uptime_s": (info or {}).get("uptime_s", 0),
                 "restarts": (info or {}).get("restarts", 0),
             }

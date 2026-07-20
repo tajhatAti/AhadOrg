@@ -793,6 +793,7 @@ def job_start(req: JobStartRequest, authorization: Optional[str] = Header(None))
         "restart_enabled": bool(req.restart),
         "stop_requested": False,
         "started_at": time.time(),
+        "last_proxy_time": time.time(),
         # Public web identity — assigned ONCE here so crash auto-restarts keep
         # the exact same /live/{slug}/ address and port.
         "port": _alloc_port(),
@@ -933,21 +934,45 @@ async def live_http(slug: str, request: Request, full_path: str = ""):
     }
     headers["x-forwarded-for"] = request.client.host if request.client else ""
     headers["x-forwarded-prefix"] = f"/live/{slug}"
+
+    now = time.time()
+    last_access = j.get("last_proxy_time", 0)
+    is_idle = (now - last_access > 120)
+    j["last_proxy_time"] = now
+
     try:
         body = await request.body()
-        async with httpx.AsyncClient(timeout=30.0, follow_redirects=False) as client:
-            resp = await client.request(request.method, target, content=body, headers=headers)
-    except httpx.ConnectError:
-        j["web"] = False  # listener just died — let the watchdog re-detect
+    except Exception:
+        body = b""
+
+    retries = [2.0, 4.0, 8.0]
+    resp = None
+    success = False
+    last_exc = None
+
+    for attempt in range(len(retries) + 1):
+        try:
+            async with httpx.AsyncClient(timeout=30.0, follow_redirects=False) as client:
+                resp = await client.request(request.method, target, content=body, headers=headers)
+            success = True
+            break
+        except (httpx.ConnectError, httpx.TimeoutException, httpx.HTTPError) as exc:
+            last_exc = exc
+            if attempt < len(retries):
+                delay = retries[attempt]
+                logger.info("Proxy request to job %s failed (%s), retrying in %ss (attempt %d/3)...", slug, type(exc).__name__, delay, attempt + 1)
+                await asyncio.sleep(delay)
+            else:
+                pass
+
+    if not success:
+        j["web"] = False  # listener went quiet / waking up
         return HTMLResponse(_live_page(
-            "Just a moment",
-            "<h1>The web service just went quiet</h1><p>Refreshing in a few moments usually fixes it.</p>",
-        ).body, status_code=502)
-    except httpx.HTTPError:
-        return HTMLResponse(_live_page(
-            "Job busy",
-            "<h1>The job took too long to answer</h1><p>Try again shortly.</p>",
-        ).body, status_code=504)
+            "Waking up your RunSpace",
+            "<h1>Waking up your RunSpace...</h1>"
+            "<p>This can take up to a minute on the free tier. Retrying automatically...</p>",
+            accent="#e67e22"
+        ), status_code=502)
 
     # 302/301/307 redirects to root-absolute paths would drop the /live/{slug}
     # prefix — rewrite them so logins and form posts keep working.
