@@ -17,7 +17,8 @@ import app as appmod  # noqa: E402
 from app import app, get_db_connection, hash_password, now_utc_str  # noqa: E402
 
 # Email delivery is a no-op in the test sandbox (no SMTP configured there by design)
-appmod.send_email = lambda *a, **k: None
+import services.email as _email_svc
+_email_svc.send_email = lambda *a, **k: None
 
 c = TestClient(app)
 results = []

@@ -13,8 +13,11 @@ import app as appmod  # noqa: E402
 from app import app, get_db_connection, hash_password, now_utc_str  # noqa: E402
 
 # No outbound mail / runner calls inside tests.
-appmod.send_email = lambda *a, **k: None
-appmod._runner_http = lambda *a, **k: None
+import services.email as _email_svc
+import services.runner_client as _runner_svc
+import routes.deps as _deps
+_email_svc.send_email = lambda *a, **k: None
+_runner_svc._runner_http = lambda *a, **k: None
 
 c = TestClient(app)
 TEST_IP = "testclient"
@@ -74,15 +77,15 @@ check("agreed_terms_at stored", bool(row and row["agreed_terms_at"]))
 # ============ 2) SIGNUP DAILY CAP (10/IP/day) ============
 # The 5-minute base limiter would trip first in a fast test loop — clear only
 # THAT bucket between calls so the daily bucket is what we exercise.
-appmod._attempts.pop(f"{TEST_IP}:signup", None)
-appmod._attempts.pop(f"{TEST_IP}:signup:daily", None)
+_deps._attempts.pop(f"{TEST_IP}:signup", None)
+_deps._attempts.pop(f"{TEST_IP}:signup:daily", None)
 ok = 0
 for i in range(10):
     r = c.post("/signup", json={"username": f"capuser{i}", "email": f"cap{i}@t.dev",
                                 "password": "pass-123", "agreed_terms": True})
     if r.status_code == 200:
         ok += 1
-    appmod._attempts.pop(f"{TEST_IP}:signup", None)
+    _deps._attempts.pop(f"{TEST_IP}:signup", None)
 check("10 signups from one IP succeed", ok == 10, f"ok={ok}")
 r = c.post("/signup", json={"username": "capuserX", "email": "capX@t.dev",
                             "password": "pass-123", "agreed_terms": True})
@@ -99,7 +102,7 @@ check("non-admin suspend attempt → 404", r.status_code == 404)
 check("no-token /admin/overview → 401", c.get("/admin/overview").status_code == 401)
 
 # ============ 4) ADMIN GRANT via env + /profile flag ============
-appmod.ADMIN_EMAILS = {"boss@t.dev"}
+_deps.ADMIN_EMAILS = {"boss@t.dev"}
 uid_a, tok_a = make_user("boss", "boss@t.dev", "pass-123", with_2fa=True)
 prof = c.get("/profile", headers=auth(tok_a)).json()
 check("admin profile is_admin=True", prof.get("is_admin") is True)
@@ -135,7 +138,7 @@ check("admin jobs shows owner", jobs[0].get("owner") == "regular1")
 
 # ============ 6) SUSPEND / REACTIVATE (admin 2FA gate) ============
 uid_b, tok_b = make_user("boss2", "boss2@t.dev", "pass-123")  # admin by email? no — not in ADMIN_EMAILS
-appmod.ADMIN_EMAILS = {"boss@t.dev", "boss2@t.dev"}
+_deps.ADMIN_EMAILS = {"boss@t.dev", "boss2@t.dev"}
 c.post("/login", json={"username": "boss2@t.dev", "password": "pass-123"})  # grant fires
 r = c.post("/admin/users/set-suspended", json={"user_id": uid_u, "suspended": True}, headers=auth(tok_b))
 check("admin WITHOUT 2FA suspending → 409", r.status_code == 409, r.text[:120])
@@ -162,7 +165,7 @@ r = c.post("/admin/users/set-suspended",
            json={"user_id": uid_u, "suspended": False, "code": pyotp.TOTP(secret).now()},
            headers=auth(tok_a))
 check("reactivate → 200", r.status_code == 200, r.text[:120])
-appmod._attempts.pop(f"{TEST_IP}:login:regular1@t.dev", None)  # dodge the base login limiter
+_deps._attempts.pop(f"{TEST_IP}:login:regular1@t.dev", None)  # dodge the base login limiter
 r = c.post("/login", json={"username": "regular1@t.dev", "password": "pass-123"})
 check("reactivated user can login again", r.status_code == 200, r.text[:120])
 tok_u = r.json()["token"]

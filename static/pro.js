@@ -170,8 +170,10 @@ function logEvent(type, title, meta) {
   renderActivity();
   // Mirror to the server-side activity log — that's the source of truth
   // that survives redeploys (localStorage is only a render cache).
+  // Fire-and-forget: failures (dead token mid-logout, network blip) must
+  // NEVER surface as an unhandled rejection or a scare-toast.
   if (authToken) {
-    try { api("/activity-log", "POST", { action: `${type}:${title}`, details: meta || "" }, true); } catch (e) {}
+    api("/activity-log", "POST", { action: `${type}:${title}`, details: meta || "" }, true).catch(() => {});
   }
 }
 
@@ -2487,10 +2489,34 @@ function stopJobPolling() {
    never leaked. Destructive actions re-ask the admin's OWN 2FA code. */
 let _admPending = null;   // { user_id, suspended } awaiting 2FA confirm
 
+let _adminSectHtml = null;   // pristine copy so the panel can come BACK on
+                             // this device when an actual admin signs in next
 function applyAdminVisibility(profile) {
+  const isAdm = !!(profile && profile.is_admin);
   const btn = document.getElementById("tabBtnAdmin");
-  if (!btn) return;
-  btn.classList.toggle("hidden", !(profile && profile.is_admin));
+  if (btn) btn.classList.toggle("hidden", !isAdm);
+  let sect = document.getElementById("tab-admin");
+
+  if (isAdm) {
+    if (!sect && _adminSectHtml) {
+      const host = document.querySelector(".dash-main");
+      if (host) host.insertAdjacentHTML("beforeend", _adminSectHtml);
+    }
+    return;
+  }
+
+  // STEALTH for everyone else — the panel must not merely hide its DATA, it
+  // must not EXIST: non-admins get "this page isn't here", exactly like the
+  // server's 404. Remove the section from the DOM (switchTab then no-ops on
+  // it), bounce anyone sitting on it, and scrub the /admin URL + any saved
+  // deep-link so the address bar never advertises it either.
+  if (sect && !_adminSectHtml) _adminSectHtml = sect.outerHTML;
+  if (currentTab === "admin") switchTab("overview");
+  if (sect) sect.remove();
+  try {
+    if (_clientPath() === "/admin") history.replaceState({}, "", "/dashboard");
+    if (sessionStorage.getItem("ahad_return_to") === "/admin") sessionStorage.removeItem("ahad_return_to");
+  } catch (e) {}
 }
 
 async function loadAdminPanel(force) {
